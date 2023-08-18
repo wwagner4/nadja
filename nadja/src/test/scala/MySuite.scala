@@ -12,11 +12,11 @@ class MySuite extends munit.FunSuite {
   }
 
   List(
-    ("coverall_D.jpg", NFilename("coverall", NChar.N, "jpg")),
+    ("coverall_D.jpg", NFilename("coverall", NChar.D, "jpg")),
     ("coverall_N.jpg", NFilename("coverall", NChar.N, "jpg")),
-    ("coverall_J.jpg", NFilename("coverall", NChar.N, "jpg")),
-    ("coverall_A.jpg", NFilename("coverall", NChar.N, "jpg")),
-    ("x_A.JPG", NFilename("x", NChar.N, "JPG")),
+    ("coverall_J.jpg", NFilename("coverall", NChar.J, "jpg")),
+    ("coverall_A.jpg", NFilename("coverall", NChar.A, "jpg")),
+    ("x_A.JPG", NFilename("x", NChar.A, "JPG")),
   ).foreach{ (fn, nfn) =>
     test(s"convert filename $fn") {
       assertEquals(Main.parseFilename(fn), nfn)

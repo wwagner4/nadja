@@ -22,8 +22,9 @@ object Main {
     Files.list(root)
       .iterator
       .asScala
-      .map(p => p.getFileName())
-      .foreach(x => println(x))
+      .map(p => p.getFileName().toString())
+      //.map(fn => parseFilename(fn))
+      .foreach(nfn => println(nfn))
   }
 
   def exe(cmdList: List[String]) = {
@@ -33,12 +34,9 @@ object Main {
   }
 
   def parseFilename(filename: String): NFilename = {
-    println(s"fn:$filename")
     val a = filename.split("\\.")
-    println(s"a:|${a.mkString("::")}|")
     val b = a(0).split("_")
-    println(s"b:|${b.mkString("::")}|")
     val c = NChar.valueOf(b(1))
-    NFilename(b(0), NChar.N, a(1)) 
+    NFilename(b(0), c, a(1)) 
   }
 }
