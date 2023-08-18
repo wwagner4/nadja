@@ -33,6 +33,12 @@ object Main {
   }
 
   def parseFilename(filename: String): NFilename = {
-    NFilename("", NChar.N, "") 
+    println(s"fn:$filename")
+    val a = filename.split("\\.")
+    println(s"a:|${a.mkString("::")}|")
+    val b = a(0).split("_")
+    println(s"b:|${b.mkString("::")}|")
+    val c = NChar.valueOf(b(1))
+    NFilename(b(0), NChar.N, a(1)) 
   }
 }
