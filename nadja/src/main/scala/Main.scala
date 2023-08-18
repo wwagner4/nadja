@@ -1,5 +1,8 @@
-@main def hello: Unit =
-  println("Hello world!")
-  println(msg)
+import sys.process._
 
-def msg = "I was compiled by Scala 3. :)"
+@main def hello: Unit = {
+  val cmd = "ls -l"
+  val r  = cmd.!
+  if r != 0 then throw RuntimeException(s"Could not execute $cmd")
+  println("Success")
+}
