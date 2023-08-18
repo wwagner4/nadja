@@ -19,7 +19,7 @@ class MySuite extends munit.FunSuite {
     ("x_A.JPG", NFilename("x", NChar.A, "JPG")),
   ).foreach{ (fn, nfn) =>
     test(s"convert filename $fn") {
-      assertEquals(Main.parseFilename(fn), nfn)
+      assertEquals(Util.parseFilename(fn), nfn)
     }
   }
 }
