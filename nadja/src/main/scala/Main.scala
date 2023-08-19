@@ -1,7 +1,6 @@
 import sys.process.Process
-
 import scala.collection.JavaConverters._
-import java.nio.file.{Path, Files}
+
 
 enum NChar {
   case N, A, D, J,
@@ -10,7 +9,7 @@ enum NChar {
 val nadja = List(NChar.N, NChar.A, NChar.D, NChar.J, NChar.A )
 
 case class NBase (
-  path: Path,
+  path: os.Path,
   files: List[NFilename],
 )
 
@@ -23,14 +22,14 @@ case class NFilename(
 object Main {
 
   @main def hallo: Unit = {
-    val root = Path.of("/home/wwagner4/work/nadja/kimi2-t1/t1200")
-    val out = Path.of("/home/wwagner4/work/nadja/kimi2-t1-out")
-    if Files.notExists(out) then Files.createDirectory(out)
+    val root = os.home / "work" / "nadja" / "kimi2-t1" / "t1200"
+    val out = os.home / "work" / "nadja" / "kimi2-t1" / "t1-out"
+    os.makeDir.all(out)
     println(s"root: $root")
     val base = Util.createBase(root)
 
     val infiles = fienames(base, nadja)
-    val outPath = out.resolve("out001.jpg")
+    val outPath = out / "out002.jpg"
   
     val cmd = List(
       "montage", 
@@ -63,13 +62,11 @@ object Main {
 
 object Util {
 
-  def createBase(path: Path): NBase = {
+  def createBase(path: os.Path): NBase = {
 
-    val files = Files.list(path)
-      .iterator
-      .asScala
+    val files = os.list(path)
       .toList
-      .map(p => p.getFileName().toString())
+      .map(p => p.last)
       .flatMap(fn => Util.parseFilename(fn))
     NBase(
       path, files
@@ -95,8 +92,8 @@ object Util {
     }
   }
 
-  def path(nfn: NFilename, root: Path): Path = {
+  def path(nfn: NFilename, root: os.Path): os.Path = {
     val x = s"${nfn.name}_${nfn.char}.${nfn.ext}" 
-    root.resolve(x)
+    root / x
   }
 }
