@@ -23,22 +23,29 @@ object Main {
 
   @main def hallo: Unit = {
     val root = os.home / "work" / "nadja" / "kimi2-t1" / "t1200"
-    val out = os.home / "work" / "nadja" / "kimi2-t1" / "t1-out"
+    val out = os.home / "work" / "nadja" / "kimi2-t1" / "out"
     os.makeDir.all(out)
     println(s"root: $root")
     val base = Util.createBase(root)
 
     val infiles = fienames(base, nadja)
-    val outPath = out / "out002.jpg"
+    val tmp01Path = os.temp()
+    val outPath = out / "out003.jpg"
   
     val cmd = List(
       "montage", 
       "-fill", 
       "black", 
+      "-background", 
+      "black", 
       "-bordercolor", 
       "black", 
+      "-resize",
+      "1000x",
+      "-gravity",
+      "east",
       "-borderwidth", 
-      "20", 
+      "0", 
       "-tile", 
       "5x1", 
       "-geometry", 
@@ -46,11 +53,35 @@ object Main {
     ) ++
     infiles ++
     List(
-      s"${outPath}",
+      s"${tmp01Path}",
     )
 
     println(cmd.mkString(" \\\n"))
     Util.exe(cmd)
+
+    val w = 3000
+    val h = (w * 3 / 4).toInt
+    val geo1 = s"${w}x${h}"
+
+    val cmd1 = List(
+      "convert",
+      s"${tmp01Path}", 
+      "-background",
+      "black", 
+      "-gravity", 
+      "center",
+      "-resize",
+      geo1, 
+      "-extent", 
+      geo1,  
+    ) ++
+      List(
+        s"${outPath}",
+    )
+    println(cmd1.mkString(" \\\n"))
+    Util.exe(cmd1)
+
+
   }
 
   def fienames(base: NBase, chars: List[NChar]): List[String] = {
