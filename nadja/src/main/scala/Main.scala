@@ -37,17 +37,19 @@ object Main {
       "black", 
       "-bordercolor", 
       "black", 
+      "-borderwidth", 
+      "20", 
       "-tile", 
       "5x1", 
       "-geometry", 
-      "+5+5",
+      "+0+0",
     ) ++
     infiles ++
     List(
       s"${outPath}",
     )
 
-    println(cmd.mkString("\n"))
+    println(cmd.mkString(" \\\n"))
     Util.exe(cmd)
   }
 
