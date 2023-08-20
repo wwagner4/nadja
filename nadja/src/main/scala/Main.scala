@@ -1,5 +1,6 @@
 import sys.process.Process
 import scala.jdk.CollectionConverters._
+import scala.util.Random
 
 
 enum NChar {
@@ -22,7 +23,12 @@ case class NFilename(
 object Main {
 
   @main def hallo: Unit = {
+    // mainTryout()
     mainMontage()
+  }
+
+  def mainTryout() = {
+    println((10 to (1, -1)).mkString(","))
   }
 
   def mainResize() = {
@@ -33,19 +39,36 @@ object Main {
   }
 
   def mainMontage() = {
+
+    def colsFromRows(rows: Int): Int = {
+      rows match {
+        case 1 => 5
+        case 2 => 6
+        case 3 => 7
+        case 4 => 8
+        case _ => (rows * 1.8).toInt
+      }
+    }
+
     val root = os.home / "work" / "nadja" / "kimi2-t1"
     val out = os.home / "work" / "nadja" / "kimi2-t1" / "out"
     os.makeDir.all(out)
-    (1 to 8).foreach {rows =>
+    val maxrows = 6
+    (0 until maxrows).foreach {j =>
+      val rows = maxrows - j
+      val cols = colsFromRows(rows)
       val size = Util.sizeFromRows(rows)
       val sizedRoot = os.temp.dir()
       resizeAll(root, size, sizedRoot)
       val base = Util.createBase(sizedRoot)
       val infiles = fienames(base, nadja)
-      val outfile = out / s"out008_${rows}.jpg"
-      val t1 = os.temp()
-      montage(infiles, rows=rows, cols=5, size=size, outfile=t1)
-      resize(t1, outfile)
+      (1 to 10).foreach {i =>
+        val outfile = out / s"out008_${(j+1) * 100 + i}.jpg"
+        val t1 = os.temp()
+        val randomize = j != maxrows || i != 10
+        montage(infiles, rows=rows, cols=cols, size=size, randomize=randomize, outfile=t1)
+        resize(t1, outfile)
+      }
     }
   }
 
@@ -97,9 +120,16 @@ object Main {
       .foreach(rs(_))
   }
 
-  def montage(infiles: Iterable[os.Path], rows: Int, cols: Int, size: Int, outfile: os.Path) = {
+  def montage(infiles: Iterable[os.Path], rows: Int, cols: Int, size: Int, randomize: Boolean, outfile: os.Path) = {
     val tilesgeo = s"${cols}x${rows}"
-    val fnams = infiles.take(rows * cols).map(_.toString())
+    val fns = infiles
+          .take(rows * cols)
+          .toList
+          .map(_.toString())
+    val fnams = randomize match {
+      case true => Random.shuffle(fns)
+      case false => fns
+    }
     val cmd = List(
       "montage", 
       "-fill", 

@@ -27,4 +27,3 @@ class MySuite extends munit.FunSuite {
     }
   }
 }
-
