@@ -11,6 +11,9 @@ lazy val root = project
     libraryDependencies ++= Seq(
       "com.lihaoyi" %% "os-lib" % "0.9.1",
       "org.scalameta" %% "munit" % "0.7.29" % Test
-    )
+    ),
+    scalacOptions ++= Seq(
+      // "-deprecation"
+    ),
   )
 
