@@ -29,9 +29,41 @@ object Main {
     val base = Util.createBase(root)
 
     val infiles = fienames(base, nadja)
-    val tmp01Path = os.temp()
-    val outPath = out / "out003.jpg"
+    val t1 = os.temp()
+    val outfile = out / "out006.jpg"
   
+    montage(infiles, rows=4, cols=2, outfile=t1)
+    resize(t1, outfile)
+
+
+  }
+
+  def resize(infile: os.Path, outfile: os.Path) = {
+    val w = 1500
+    val h = (w * 3 / 4).toInt
+    val geo1 = s"${w}x${h}"
+
+    val cmd1 = List(
+      "convert",
+      s"${infile}", 
+      "-background",
+      "black", 
+      "-gravity", 
+      "center",
+      "-resize",
+      geo1, 
+      "-extent", 
+      geo1,  
+    ) ++
+      List(
+        s"${outfile}",
+    )
+    println(cmd1.mkString(" \\\n"))
+    Util.exe(cmd1)
+  }
+
+  def montage(infiles: List[os.Path], rows: Int, cols: Int, outfile: os.Path) = {
+    val tilesgeo = s"${rows}x${cols}"
     val cmd = List(
       "montage", 
       "-fill", 
@@ -47,48 +79,24 @@ object Main {
       "-borderwidth", 
       "0", 
       "-tile", 
-      "5x1", 
+      tilesgeo, 
       "-geometry", 
       "+0+0",
     ) ++
-    infiles ++
+    infiles.map{_.toString()} ++
     List(
-      s"${tmp01Path}",
+      s"${outfile}",
     )
 
     println(cmd.mkString(" \\\n"))
     Util.exe(cmd)
-
-    val w = 3000
-    val h = (w * 3 / 4).toInt
-    val geo1 = s"${w}x${h}"
-
-    val cmd1 = List(
-      "convert",
-      s"${tmp01Path}", 
-      "-background",
-      "black", 
-      "-gravity", 
-      "center",
-      "-resize",
-      geo1, 
-      "-extent", 
-      geo1,  
-    ) ++
-      List(
-        s"${outPath}",
-    )
-    println(cmd1.mkString(" \\\n"))
-    Util.exe(cmd1)
-
-
   }
 
-  def fienames(base: NBase, chars: List[NChar]): List[String] = {
+
+  def fienames(base: NBase, chars: List[NChar]): List[os.Path] = {
     chars
       .flatMap {c =>  base.files.filter{f => f.char == c}}
       .map(f => Util.path(f, base.path))
-      .map(p => p.toString())
   }
 
 }
