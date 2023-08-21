@@ -27,55 +27,38 @@ object Main {
     mainMontage()
   }
 
-  def mainTryout() = {
-    println((10 to (1, -1)).mkString(","))
-  }
-
-  def mainResize() = {
-    val root1 = os.home / "work" / "nadja" / "kimi2-t1"
-    val t500 = root1 / "t100"
-    os.makeDir.all(t500)
-    resizeAll(root1, 500, t500)
-  }
-
   def mainMontage() = {
 
-    def colsFromRows(rows: Int): Int = {
-      rows match {
-        case 1 => 5
-        case 2 => 6
-        case 3 => 7
-        case 4 => 8
-        case _ => (rows * 1.8).toInt
-      }
-    }
+    val name = "coverall"
+    val id = "10"
+    val maxrows = 8
+    val combis = 6
+    val width = 1000
+    val height = 800
 
-    val root = os.home / "work" / "nadja" / "kimi2-t1"
-    val out = os.home / "work" / "nadja" / "kimi2-t1" / "out"
+    val root = os.home / "work" / "nadja" / name
+    val out = os.home / "work" / "nadja" / "out" / s"${name}-out${id}"
     os.makeDir.all(out)
-    val maxrows = 6
     (0 until maxrows).foreach {j =>
       val rows = maxrows - j
-      val cols = colsFromRows(rows)
-      val size = Util.sizeFromRows(rows)
+      val cols = Util.colsFromRows(rows)
       val sizedRoot = os.temp.dir()
+      val size = Util.sizeFromRows(rows)
       resizeAll(root, size, sizedRoot)
       val base = Util.createBase(sizedRoot)
       val infiles = fienames(base, nadja)
-      (1 to 10).foreach {i =>
-        val outfile = out / s"out008_${(j+1) * 100 + i}.jpg"
+      (1 to combis).foreach {i =>
+        val outfile = out / s"nadja_${(j+1) * 100 + i}.jpg"
         val t1 = os.temp()
-        val randomize = j != maxrows || i != 10
-        montage(infiles, rows=rows, cols=cols, size=size, randomize=randomize, outfile=t1)
-        resize(t1, outfile)
+        val randomize = j != (maxrows - 1) || i != combis
+        montage(infiles, rows=rows, cols=cols, randomize=randomize, outfile=t1)
+        resize(t1, width, height, outfile)
       }
     }
   }
 
-  def resize(infile: os.Path, outfile: os.Path) = {
-    val w = 1500
-    val h = (w * 3 / 4).toInt
-    val geo1 = s"${w}x${h}"
+  def resize(infile: os.Path, width: Int, height: Int, outfile: os.Path) = {
+    val geo1 = s"${width}x${height}"
 
     val cmd1 = List(
       "convert",
@@ -115,12 +98,14 @@ object Main {
       Util.exe(cmd)
     }
 
-    os.list(indir)
+    val files = os.list(indir)
       .filter(p => os.isFile(p) && imageExts.contains(p.ext.toLowerCase()))
-      .foreach(rs(_))
+    if files.isEmpty then println(s"WARNING:  Found no files in ${indir}")
+    files.foreach(rs(_))
   }
 
-  def montage(infiles: Iterable[os.Path], rows: Int, cols: Int, size: Int, randomize: Boolean, outfile: os.Path) = {
+  def montage(infiles: Iterable[os.Path], rows: Int, cols: Int, randomize: Boolean, outfile: os.Path) = {
+    val size = Util.sizeFromRows(rows) 
     val tilesgeo = s"${cols}x${rows}"
     val fns = infiles
           .take(rows * cols)
@@ -163,12 +148,23 @@ object Main {
     val cs = chars
       .flatMap {c =>  base.files.filter{f => f.char == c}}
       .map(f => Util.path(f, base.path))
+    if cs.isEmpty then throw IllegalArgumentException(s"found no files in ${base.path}")
     LazyList.continually(cs).flatten
   }
 
 }
 
 object Util {
+
+  def colsFromRows(rows: Int): Int = {
+    rows match {
+      case 1 => 5
+      case 2 => 6
+      case 3 => 7
+      case 4 => 8
+      case _ => (rows * 1.8).toInt
+    }
+  }
 
   def sizeFromRows(rows: Int): Int = {
     if rows < 1 then throw IllegalArgumentException(s"Illegal value for sizeFromRows ${rows}")
