@@ -30,31 +30,36 @@ object Main {
   def mainMontage() = {
 
     val name = "coverall"
-    val id = "10"
-    val maxrows = 8
-    val combis = 6
+    val id = "12"
+    val maxrows = 15
+    val combis = 10
+    val framerate = 5
     val width = 1000
     val height = 800
 
-    val root = os.home / "work" / "nadja" / name
-    val out = os.home / "work" / "nadja" / "out" / s"${name}-out${id}"
-    os.makeDir.all(out)
+    val rootdir = os.home / "work" / "nadja" / name
+    val outdir = os.home / "work" / "nadja" / "out" / s"${name}-${id}"
+    os.makeDir.all(outdir)
     (0 until maxrows).foreach {j =>
       val rows = maxrows - j
       val cols = Util.colsFromRows(rows)
-      val sizedRoot = os.temp.dir()
+      val sizedRootDir = os.temp.dir()
       val size = Util.sizeFromRows(rows)
-      resizeAll(root, size, sizedRoot)
-      val base = Util.createBase(sizedRoot)
+      resizeAll(rootdir, size, sizedRootDir)
+      val base = Util.createBase(sizedRootDir)
       val infiles = fienames(base, nadja)
       (1 to combis).foreach {i =>
-        val outfile = out / s"nadja_${(j+1) * 100 + i}.jpg"
+        val outfile = outdir / s"nadja_${(j+1) * 100 + i}.jpg"
         val t1 = os.temp()
         val randomize = j != (maxrows - 1) || i != combis
         montage(infiles, rows=rows, cols=cols, randomize=randomize, outfile=t1)
         resize(t1, width, height, outfile)
       }
     }
+    val videoFile = outdir / "nadjaMontage.mp4"
+    video(outdir, framerate ,videoFile)
+    println("------------------------------------------------------------------")
+    println(s"Created video: ${videoFile}")
   }
 
   def resize(infile: os.Path, width: Int, height: Int, outfile: os.Path) = {
@@ -77,6 +82,28 @@ object Main {
     )
     println(cmd1.mkString(" \\\n"))
     Util.exe(cmd1)
+  }
+
+  def video(indir: os.Path, frameRate: Int, outfile: os.Path) = {
+    val inpattern = indir / "*.jpg"
+    val cmd = List(
+      "ffmpeg",
+      "-framerate",
+      frameRate.toString(), 
+      "-pattern_type",
+      "glob", 
+      "-i", 
+      inpattern.toString(), 
+      "-c:v",
+      "libx264", 
+      "-pix_fmt", 
+      "yuv420p",
+    ) ++
+      List(
+        s"${outfile}",
+    )
+    println(cmd.mkString(" \\\n"))
+    Util.exe(cmd)
   }
 
   val imageExts = Seq("jpg", "jpeg", "png")
