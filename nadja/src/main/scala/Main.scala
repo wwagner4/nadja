@@ -23,9 +23,71 @@ case class NFilename(
 object Main {
 
   @main def hallo: Unit = {
-    // mainTryout()
-    mainMontage()
+    //mainTryout()
+    // mainMontage()
+    mainSwipe()
   }
+
+  def mainTryout() = {
+  }
+
+  def mainSwipe() = {
+
+    def slowFactors(): Iterable[Int] = {
+    val a = 20
+    val b = 10
+    LazyList.from(0)
+      .map(i => (1 + a - a * math.cos(i.toDouble/b)).toInt)
+      .take(50)
+    }
+
+    def mySlices[T](in: List[T]): Seq[List[T]] = {
+      val n = (in.size / 3).toInt
+      (0 to 2*n).map(i => in.slice(i, i+5))
+    }
+
+    def slowDown[T](in: Iterable[T]): Iterable[T] = {
+      ???
+    }
+
+    def slowValies():Iterable[Int] = {
+      ???
+    }
+
+    val visible = List(
+      ".",
+      ".",
+      ".",
+      ".",
+      ".",
+      "N",
+      "A",
+      "D",
+      "J",
+      "A",
+      "K",
+      ".",
+      ".",
+      ".",
+      ".",
+      ".",
+      ".",
+    )
+
+    val slices = mySlices(visible)
+      .zip(slowFactors())
+    val out = slices.mkString("\n")
+    println(out)
+
+    val ll = LazyList.continually(List("A", "B")).flatten
+      .zip(slowFactors())
+      .map((a, i) => List.fill(i)(a))
+      .take(100)
+    for l <- ll do {
+      println(l)
+    }
+  }
+
 
   def mainMontage() = {
 
