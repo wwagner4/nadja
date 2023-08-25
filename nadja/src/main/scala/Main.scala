@@ -4,7 +4,7 @@ import scala.util.Random
 
 
 enum NChar {
-  case N, A, D, J,
+  case N, A, D, J, CBL
 }
 
 val nadja = List(NChar.N, NChar.A, NChar.D, NChar.J, NChar.A )
@@ -23,9 +23,9 @@ case class NFilename(
 object Main {
 
   @main def hallo: Unit = {
-    //mainTryout()
-    // mainMontage()
-    mainSwipe()
+    // mainTryout()
+    mainMontage()
+    // mainSwipe()
   }
 
   def mainTryout() = {
@@ -40,7 +40,18 @@ object Main {
         .map(i => (1 + a - a * math.cos(i.toDouble/b)).toInt)
     }
 
-    def tryoutSlowDown() = {
+    def applySlowDown[T](in: Iterable[T]): Iterable[T] = {
+      in
+        .zip(slowFactors())
+        .flatMap((a, i) => List.fill(i)(a))
+    }
+
+    def mySlices[T](in: List[T], slizeLen: Int): Seq[List[T]] = {
+      val maxIndex = in.size - slizeLen
+      (0 to maxIndex).map(i => in.slice(i, i + slizeLen))
+    }
+
+    def doSwipe() = {
 
       val visible = List(
         ".",
@@ -58,11 +69,7 @@ object Main {
         ".",
         ".",
         ".",
-        ".",
-        ".",
-        ".",
-        ".",
-      )
+      ).map(Util.nChar)
 
       val fs = mySlices(visible, 5)
 
@@ -79,19 +86,17 @@ object Main {
       println(lss)
     }
 
-    def applySlowDown[T](in: Iterable[T]): Iterable[T] = {
-      in
-        .zip(slowFactors())
-        .flatMap((a, i) => List.fill(i)(a))
-    }
+    val name = "coverall"
+    val id = "00"
 
-    def mySlices[T](in: List[T], slizeLen: Int): Seq[List[T]] = {
-      val maxIndex = in.size - slizeLen
-      (0 to maxIndex).map(i => in.slice(i, i + slizeLen))
-    }
-
-
-    tryoutSlowDown()
+    val rootdir = os.pwd / "src" / "test" / "resources" / name
+    val outdir = os.home / "work" / "nadja" / "out" / "swipe" / s"${name}-${id}"
+    os.makeDir.all(outdir)
+    
+    val resizedDir = os.temp.dir()
+    resizeAll(rootdir, 1200, resizedDir)
+    val base = Util.createBase(resizedDir)
+    println(s"base: ${base}")
   }
 
 
@@ -99,15 +104,17 @@ object Main {
 
     val name = "coverall"
     val id = "12"
-    val maxrows = 15
-    val combis = 10
+    val maxrows = 6
+    val combis = 5
     val framerate = 5
-    val width = 1000
-    val height = 800
+    val width = 800
+    val height = 500
 
-    val rootdir = os.home / "work" / "nadja" / name
-    val outdir = os.home / "work" / "nadja" / "out" / s"${name}-${id}"
+    // val rootdir = os.home / "work" / "nadja" / name
+    val rootdir = os.pwd / "src" / "test" / "resources" / name
+    val outdir = os.home / "work" / "nadja" / "out" / "montage" /s"${name}-${id}"
     os.makeDir.all(outdir)
+    
     (0 until maxrows).foreach {j =>
       val rows = maxrows - j
       val cols = Util.colsFromRows(rows)
@@ -119,8 +126,17 @@ object Main {
       (1 to combis).foreach {i =>
         val outfile = outdir / s"nadja_${(j+1) * 100 + i}.jpg"
         val t1 = os.temp()
+
         val randomize = j != (maxrows - 1) || i != combis
-        montage(infiles, rows=rows, cols=cols, randomize=randomize, outfile=t1)
+        val fns = infiles
+          .take(rows * cols)
+          .toList
+        val fnams = randomize match {
+          case true => Random.shuffle(fns)
+          case false => fns
+        }
+
+        montage(fnams, rows=rows, cols=cols, outfile=t1)
         resize(t1, width, height, outfile)
       }
     }
@@ -156,6 +172,7 @@ object Main {
     val inpattern = indir / "*.jpg"
     val cmd = List(
       "ffmpeg",
+      "-y",
       "-framerate",
       frameRate.toString(), 
       "-pattern_type",
@@ -199,17 +216,13 @@ object Main {
     files.foreach(rs(_))
   }
 
-  def montage(infiles: Iterable[os.Path], rows: Int, cols: Int, randomize: Boolean, outfile: os.Path) = {
+  def montage(infiles: Iterable[os.Path], rows: Int, cols: Int, outfile: os.Path) = {
     val size = Util.sizeFromRows(rows) 
     val tilesgeo = s"${cols}x${rows}"
-    val fns = infiles
+    val fnams = infiles
           .take(rows * cols)
           .toList
           .map(_.toString())
-    val fnams = randomize match {
-      case true => Random.shuffle(fns)
-      case false => fns
-    }
     val cmd = List(
       "montage", 
       "-fill", 
@@ -250,6 +263,17 @@ object Main {
 }
 
 object Util {
+
+  def nChar(c: String): NChar = {
+    c match {
+      case "N" => NChar.N
+      case "A" => NChar.A
+      case "D" => NChar.D
+      case "J" => NChar.J
+      case "." => NChar.CBL
+      case _ => throw IllegalArgumentException(s"Unknown character '${c}' for creating NChar")
+    }
+  }
 
   def colsFromRows(rows: Int): Int = {
     rows match {
