@@ -34,58 +34,64 @@ object Main {
   def mainSwipe() = {
 
     def slowFactors(): Iterable[Int] = {
-    val a = 20
-    val b = 10
-    LazyList.from(0)
-      .map(i => (1 + a - a * math.cos(i.toDouble/b)).toInt)
-      .take(50)
+      val a = 10
+      val b = 5
+      LazyList.from(0)
+        .map(i => (1 + a - a * math.cos(i.toDouble/b)).toInt)
     }
 
-    def mySlices[T](in: List[T]): Seq[List[T]] = {
-      val n = (in.size / 3).toInt
-      (0 to 2*n).map(i => in.slice(i, i+5))
+    def tryoutSlowDown() = {
+
+      val visible = List(
+        ".",
+        ".",
+        ".",
+        ".",
+        ".",
+        "N",
+        "A",
+        "D",
+        "J",
+        "A",
+        ".",
+        ".",
+        ".",
+        ".",
+        ".",
+        ".",
+        ".",
+        ".",
+        ".",
+      )
+
+      val fs = mySlices(visible, 5)
+
+
+      val ll = LazyList.continually(fs).flatten
+
+      val ls = applySlowDown(ll)
+
+      val  lss = ls
+        .zipWithIndex
+        .take(2000)
+        .mkString("\n")
+
+      println(lss)
     }
 
-    def slowDown[T](in: Iterable[T]): Iterable[T] = {
-      ???
+    def applySlowDown[T](in: Iterable[T]): Iterable[T] = {
+      in
+        .zip(slowFactors())
+        .flatMap((a, i) => List.fill(i)(a))
     }
 
-    def slowValies():Iterable[Int] = {
-      ???
+    def mySlices[T](in: List[T], slizeLen: Int): Seq[List[T]] = {
+      val maxIndex = in.size - slizeLen
+      (0 to maxIndex).map(i => in.slice(i, i + slizeLen))
     }
 
-    val visible = List(
-      ".",
-      ".",
-      ".",
-      ".",
-      ".",
-      "N",
-      "A",
-      "D",
-      "J",
-      "A",
-      "K",
-      ".",
-      ".",
-      ".",
-      ".",
-      ".",
-      ".",
-    )
 
-    val slices = mySlices(visible)
-      .zip(slowFactors())
-    val out = slices.mkString("\n")
-    println(out)
-
-    val ll = LazyList.continually(List("A", "B")).flatten
-      .zip(slowFactors())
-      .map((a, i) => List.fill(i)(a))
-      .take(100)
-    for l <- ll do {
-      println(l)
-    }
+    tryoutSlowDown()
   }
 
 
