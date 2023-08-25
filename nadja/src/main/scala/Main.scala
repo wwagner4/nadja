@@ -24,8 +24,8 @@ object Main {
 
   @main def hallo: Unit = {
     // mainTryout()
-    mainMontage()
-    // mainSwipe()
+    // mainMontage()
+    mainSwipe()
   }
 
   def mainTryout() = {
@@ -51,7 +51,7 @@ object Main {
       (0 to maxIndex).map(i => in.slice(i, i + slizeLen))
     }
 
-    def doSwipe() = {
+    def doSwipe(base: NBase, outdir: os.Path) = {
 
       val visible = List(
         ".",
@@ -71,19 +71,31 @@ object Main {
         ".",
       ).map(Util.nChar)
 
-      val fs = mySlices(visible, 5)
-
-
-      val ll = LazyList.continually(fs).flatten
-
-      val ls = applySlowDown(ll)
-
-      val  lss = ls
+      val slices = LazyList.continually(mySlices(visible, 5)).flatten
+      val descs = applySlowDown(slices)
+      descs
         .zipWithIndex
-        .take(2000)
-        .mkString("\n")
+        .take(100)
+        .foreach((desc, index) => createImage(base, desc, index, outdir))
 
-      println(lss)
+
+      val videoFile = outdir / "nadjaSwipe.mp4"
+      video(outdir, 10 ,videoFile)
+      println("------------------------------------------------------------------")
+      println(s"Created video: ${videoFile}")
+
+    }
+
+    def createImage(base: NBase, descr: List[NChar], index: Int,  outdir: os.Path) = {
+      val len = descr.size
+      val fns = fienamesContinually(base, descr).take(len)
+
+      val zi = "%04d".format(index)
+      val outfile = outdir / s"nadja_${zi}.jpg"
+      val t1 = os.temp()
+
+      montage(fns, rows=1, cols=5, outfile=t1)
+      resize(t1, 800, 500, outfile)
     }
 
     val name = "coverall"
@@ -97,6 +109,7 @@ object Main {
     resizeAll(rootdir, 1200, resizedDir)
     val base = Util.createBase(resizedDir)
     println(s"base: ${base}")
+    doSwipe(base, outdir)
   }
 
 
@@ -122,7 +135,7 @@ object Main {
       val size = Util.sizeFromRows(rows)
       resizeAll(rootdir, size, sizedRootDir)
       val base = Util.createBase(sizedRootDir)
-      val infiles = fienames(base, nadja)
+      val infiles = fienamesContinually(base, nadja)
       (1 to combis).foreach {i =>
         val outfile = outdir / s"nadja_${(j+1) * 100 + i}.jpg"
         val t1 = os.temp()
@@ -252,7 +265,7 @@ object Main {
   }
 
 
-  def fienames(base: NBase, chars: List[NChar]): LazyList[os.Path] = {
+  def fienamesContinually(base: NBase, chars: List[NChar]): LazyList[os.Path] = {
     val cs = chars
       .flatMap {c =>  base.files.filter{f => f.char == c}}
       .map(f => Util.path(f, base.path))

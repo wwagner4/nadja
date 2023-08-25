@@ -1,0 +1,4 @@
+- fixed image in video at the end (all)
+- cache for created images
+- make better configurable
+- commandlien interface
