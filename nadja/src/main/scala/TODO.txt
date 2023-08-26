@@ -2,3 +2,4 @@
 - cache for created images
 - make better configurable
 - commandlien interface
+- make the cache thradsave (akka ?)

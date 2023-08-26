@@ -2,7 +2,6 @@ import sys.process.Process
 import scala.jdk.CollectionConverters._
 import scala.util.Random
 
-
 enum NChar {
   case N, A, D, J, CBL
 }
@@ -23,12 +22,39 @@ case class NFilename(
 object Main {
 
   @main def hallo: Unit = {
-    // mainTryout()
+    mainTryout()
     // mainMontage()
-    mainSwipe()
+    // mainSwipe()
   }
 
   def mainTryout() = {
+
+    val inDir = os.pwd / "src" / "test" / "resources" / "lineal"
+    val base = Util.createBase(inDir)
+
+
+    val outDir = os.home / "tmp" / "cachetest"
+    os.makeDir.all(outDir)
+
+    def createKey(d: Iterable[NChar]): String = d.mkString("")
+
+    val desc = nadja
+    val key = createKey(desc)
+
+    def writeFile(outfile: os.Path) = {
+      val fns = fienamesContinually(base, nadja).take(10)
+      montage(fns, rows=1, cols=5, outfile=outfile)
+    }
+
+    for index <- (0 to 20) do {
+      val outfile = outDir / s"test${index}.jpg"
+      FileCache.save(key, outfile, writeFile)
+      println(s"Wrote to : ${outfile}")
+    }
+
+
+
+
   }
 
   def mainSwipe() = {
@@ -343,3 +369,4 @@ object Util {
     root / x
   }
 }
+
