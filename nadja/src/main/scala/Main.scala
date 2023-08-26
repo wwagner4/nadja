@@ -22,52 +22,22 @@ case class NFilename(
 object Main {
 
   @main def mainEntryPoint: Unit = {
-    mainTryoutCache()
     // mainMontage()
-    // mainSwipe()
-  }
-
-
-  def mainTryout() = {
-  }
-
-  def mainTryoutCache() = {
-
-    val inDir = os.pwd / "src" / "test" / "resources" / "lineal"
-    val base = Util.createBase(inDir)
-
-
-    val outDir = os.home / "tmp" / "cachetest"
-    os.makeDir.all(outDir)
-
-    def createKey(d: Iterable[NChar]): String = d.mkString("")
-
-    val desc = nadja
-    val key = createKey(desc)
-
-    def writeFile(outfile: os.Path) = {
-      val fns = fienamesContinually(base, nadja).take(10)
-      montage(fns, rows=1, cols=5, outfile=outfile)
-    }
-
-    for index <- (0 to 20) do {
-      val outfile = outDir / s"test${index}.jpg"
-      FileCache.save(key, outfile, writeFile)
-      println(s"Wrote to : ${outfile}")
-    }
-
-
-
-
+    mainSwipe()
   }
 
   def mainSwipe() = {
 
     def slowFactors(): Iterable[Int] = {
-      val a = 10
-      val b = 5
+      def f(i: Int): Int = {
+        if i < 200 then return 1
+        if i < 210 then return 2
+        if i < 332 then return 4
+        return 1000
+      }   
+
       LazyList.from(0)
-        .map(i => (1 + a - a * math.cos(i.toDouble/b)).toInt)
+        .map(f(_))
     }
 
     def applySlowDown[T](in: Iterable[T]): Iterable[T] = {
@@ -81,9 +51,14 @@ object Main {
       (0 to maxIndex).map(i => in.slice(i, i + slizeLen))
     }
 
-    def doSwipe(base: NBase, outdir: os.Path) = {
+    def doSwipe(base: NBase, len: Int, viewcols: Int, outdir: os.Path) = {
 
       val visible = List(
+        ".",
+        ".",
+        ".",
+        ".",
+        ".",
         ".",
         ".",
         ".",
@@ -99,37 +74,48 @@ object Main {
         ".",
         ".",
         ".",
+        ".",
+        ".",
+        ".",
+        ".",
+        ".",
       ).map(Util.nChar)
 
-      val slices = LazyList.continually(mySlices(visible, 5)).flatten
+      val slices = LazyList.continually(mySlices(visible, viewcols)).flatten
       val descs = applySlowDown(slices)
       descs
         .zipWithIndex
-        .take(100)
-        .foreach((desc, index) => createImage(base, desc, index, outdir))
+        .take(len)
+        .foreach((desc, index) => createImage(base, desc, index, viewcols, outdir))
 
 
       val videoFile = outdir / "nadjaSwipe.mp4"
-      video(outdir, 10 ,videoFile)
+      video(outdir, 30 ,videoFile)
       println("------------------------------------------------------------------")
       println(s"Created video: ${videoFile}")
 
     }
 
-    def createImage(base: NBase, descr: List[NChar], index: Int,  outdir: os.Path) = {
-      val len = descr.size
-      val fns = fienamesContinually(base, descr).take(len)
+    def createImage(base: NBase, descr: List[NChar], index: Int, viewcols: Int, outdir: os.Path) = {
 
       val zi = "%04d".format(index)
       val outfile = outdir / s"nadja_${zi}.jpg"
-      val t1 = os.temp()
 
-      montage(fns, rows=1, cols=5, outfile=t1)
-      resize(t1, 800, 500, outfile)
+      def createFile(out: os.Path) = {
+        val fns = fienamesContinually(base, descr).take(descr.size)
+        val t1 = os.temp()
+        montage(fns, rows=1, cols=viewcols, outfile=t1)
+        resize(t1, 800, 500, outfile)
+      }
+
+      val key = descr.mkString("")
+      FileCache.save(key, outfile, createFile)
     }
 
     val name = "coverall"
-    val id = "00"
+    val id = "03"
+    val len = 500
+    val viewcols = 7
 
     val rootdir = os.pwd / "src" / "test" / "resources" / name
     val outdir = os.home / "work" / "nadja" / "out" / "swipe" / s"${name}-${id}"
@@ -139,7 +125,7 @@ object Main {
     resizeAll(rootdir, 1200, resizedDir)
     val base = Util.createBase(resizedDir)
     println(s"base: ${base}")
-    doSwipe(base, outdir)
+    doSwipe(base, len, viewcols, outdir)
   }
 
 
