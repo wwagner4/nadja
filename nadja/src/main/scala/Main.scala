@@ -21,13 +21,17 @@ case class NFilename(
 
 object Main {
 
-  @main def hallo: Unit = {
-    mainTryout()
+  @main def mainEntryPoint: Unit = {
+    mainTryoutCache()
     // mainMontage()
     // mainSwipe()
   }
 
+
   def mainTryout() = {
+  }
+
+  def mainTryoutCache() = {
 
     val inDir = os.pwd / "src" / "test" / "resources" / "lineal"
     val base = Util.createBase(inDir)
