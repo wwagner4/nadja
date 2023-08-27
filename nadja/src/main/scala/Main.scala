@@ -22,18 +22,19 @@ case class NFilename(
 object Main {
 
   @main def mainEntryPoint: Unit = {
-    // mainMontage()
-    mainSwipe()
+    mainMontage()
+    // mainSwipe()
   }
 
   def mainSwipe() = {
 
     def slowFactors(): Iterable[Int] = {
       def f(i: Int): Int = {
-        if i < 200 then return 1
-        if i < 210 then return 2
-        if i < 332 then return 4
-        return 1000
+        if i < 1 then return 100
+        if i < 20 then return 10
+        if i < 40 then return 5
+        if i < 60 then return 2
+        return 1
       }   
 
       LazyList.from(0)
@@ -51,12 +52,9 @@ object Main {
       (0 to maxIndex).map(i => in.slice(i, i + slizeLen))
     }
 
-    def doSwipe(base: NBase, len: Int, viewcols: Int, outdir: os.Path) = {
+    def doSwipe(base: NBase, len: Int, viewcols: Int, width: Int, height: Int, outdir: os.Path) = {
 
       val visible = List(
-        ".",
-        ".",
-        ".",
         ".",
         ".",
         ".",
@@ -81,22 +79,22 @@ object Main {
         ".",
       ).map(Util.nChar)
 
-      val slices = LazyList.continually(mySlices(visible, viewcols)).flatten
+      val slices = LazyList.continually(mySlices(visible, viewcols)).flatten.drop(6)
       val descs = applySlowDown(slices)
       descs
         .zipWithIndex
         .take(len)
-        .foreach((desc, index) => createImage(base, desc, index, viewcols, outdir))
+        .foreach((desc, index) => createImage(base, desc, index, viewcols, width, height, outdir))
 
 
       val videoFile = outdir / "nadjaSwipe.mp4"
-      video(outdir, 30 ,videoFile)
+      video(outdir, 30 , width, height, videoFile)
       println("------------------------------------------------------------------")
       println(s"Created video: ${videoFile}")
 
     }
 
-    def createImage(base: NBase, descr: List[NChar], index: Int, viewcols: Int, outdir: os.Path) = {
+    def createImage(base: NBase, descr: List[NChar], index: Int, viewcols: Int, width: Int, height: Int, outdir: os.Path) = {
 
       val zi = "%04d".format(index)
       val outfile = outdir / s"nadja_${zi}.jpg"
@@ -105,19 +103,22 @@ object Main {
         val fns = fienamesContinually(base, descr).take(descr.size)
         val t1 = os.temp()
         montage(fns, rows=1, cols=viewcols, outfile=t1)
-        resize(t1, 800, 500, outfile)
+        resize(t1, width, height, outfile)
       }
 
       val key = descr.mkString("")
       FileCache.save(key, outfile, createFile)
     }
 
-    val name = "coverall"
-    val id = "03"
+    val name = "monterey"
+    val id = "01"
     val len = 500
     val viewcols = 7
+    val width = 1000
+    val height = 800
 
-    val rootdir = os.pwd / "src" / "test" / "resources" / name
+    // val rootdir = os.pwd / "src" / "test" / "resources" / name
+    val rootdir = os.home / "work" / "nadja" / "name_chars" /  name
     val outdir = os.home / "work" / "nadja" / "out" / "swipe" / s"${name}-${id}"
     os.makeDir.all(outdir)
     
@@ -125,22 +126,23 @@ object Main {
     resizeAll(rootdir, 1200, resizedDir)
     val base = Util.createBase(resizedDir)
     println(s"base: ${base}")
-    doSwipe(base, len, viewcols, outdir)
+    doSwipe(base, len, viewcols, width, height, outdir)
   }
 
 
   def mainMontage() = {
 
-    val name = "coverall"
-    val id = "12"
+    val name = "monterey"
+    val id = "13"
     val maxrows = 6
     val combis = 5
     val framerate = 5
-    val width = 800
-    val height = 500
+    val width = 2000
+    val height = 1500
 
     // val rootdir = os.home / "work" / "nadja" / name
-    val rootdir = os.pwd / "src" / "test" / "resources" / name
+    val rootdir = os.home / "work" / "nadja" / "name_chars" /  name
+    // val rootdir = os.pwd / "src" / "test" / "resources" / name
     val outdir = os.home / "work" / "nadja" / "out" / "montage" /s"${name}-${id}"
     os.makeDir.all(outdir)
     
@@ -170,7 +172,7 @@ object Main {
       }
     }
     val videoFile = outdir / "nadjaMontage.mp4"
-    video(outdir, framerate ,videoFile)
+    video(outdir, framerate, width, height,videoFile)
     println("------------------------------------------------------------------")
     println(s"Created video: ${videoFile}")
   }
@@ -197,11 +199,14 @@ object Main {
     Util.exe(cmd1)
   }
 
-  def video(indir: os.Path, frameRate: Int, outfile: os.Path) = {
+  def video(indir: os.Path, frameRate: Int, width: Int, height: Int, outfile: os.Path) = {
     val inpattern = indir / "*.jpg"
+    val size = s"${width}x${height}"
     val cmd = List(
       "ffmpeg",
       "-y",
+      "-s",
+      size,
       "-framerate",
       frameRate.toString(), 
       "-pattern_type",
@@ -212,6 +217,8 @@ object Main {
       "libx264", 
       "-pix_fmt", 
       "yuv420p",
+      "-crf",
+      "25"
     ) ++
       List(
         s"${outfile}",
