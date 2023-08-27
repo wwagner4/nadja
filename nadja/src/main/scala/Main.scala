@@ -6,8 +6,6 @@ enum NChar {
   case N, A, D, J, CBL
 }
 
-val nadja = List(NChar.N, NChar.A, NChar.D, NChar.J, NChar.A)
-
 case class NBase(
                   path: os.Path,
                   files: List[NFilename],
@@ -23,8 +21,8 @@ object Main {
 
   @main def mainEntryPoint: Unit = {
     // mainTryout()
-    // mainMontage()
-    mainSwipe()
+    mainMontage()
+    // mainSwipe()
   }
 
   def mainTryout() = {
@@ -134,47 +132,83 @@ object Main {
 
   def mainMontage() = {
 
-    val name = "monterey"
-    val id = "13"
-    val maxrows = 6
-    val combis = 5
-    val framerate = 5
-    val width = 2000
-    val height = 1500
+    case class MontageConfig(
+                              name: String,
+                              id: String,
+                              width: Int,
+                              height: Int,
+                              pattern: String,
+                              maxrows: Int,
+                              combis: Int,
+                              framerate: Int,
+                            )
+
+    val config = MontageConfig(
+      name = "pilze",
+      id = "01",
+      width = 2000,
+      height = 1500,
+      pattern = "NADJA",
+      maxrows = 10,
+      combis = 5,
+      framerate = 5,
+    )
+
 
     // val rootdir = os.home / "work" / "nadja" / name
-    val rootdir = os.home / "work" / "nadja" / "name_chars" / name
-    // val rootdir = os.pwd / "src" / "test" / "resources" / name
-    val outdir = os.home / "work" / "nadja" / "out" / "montage" / s"${name}-${id}"
+    val rootdir = os.home / "work" / "nadja" / "name_chars" / config.name
+    // val rootdir = os.pwd / "src" / "test" / "resources" / config.name
+    val outdir = os.home / "work" / "nadja" / "out" / "montage" / s"${config.name}-${config.id}"
     os.makeDir.all(outdir)
 
-    (0 until maxrows).foreach { j =>
-      val rows = maxrows - j
+    def idxStr(i: Int): String = "%06d".format(i)
+
+    val nchars = config.pattern.map(c => s"${c}").map(Util.nChar)
+    var lastInImages = List.empty[os.Path]
+    var lastIndex = 0
+    var lastRows = 0
+    var lastCols = 0
+    (0 until config.maxrows).foreach { j =>
+      val rows = config.maxrows - j
       val cols = Util.colsFromRows(rows)
       val sizedRootDir = os.temp.dir()
       val size = Util.sizeFromRows(rows)
       resizeAll(rootdir, size, sizedRootDir)
       val base = Util.createBase(sizedRootDir)
-      val infiles = fienamesContinually(base, nadja)
-      (1 to combis).foreach { i =>
-        val outfile = outdir / s"nadja_${(j + 1) * 100 + i}.jpg"
+      val infiles = fienamesContinually(base, nchars)
+      (1 to config.combis).foreach { i =>
+        val idx = (j + 1) * 100 + i
+        val outfile = outdir / s"nadja_${idxStr(idx)}.jpg"
         val t1 = os.temp()
-
-        val randomize = j != (maxrows - 1) || i != combis
         val fns = infiles
           .take(rows * cols)
           .toList
-        val fnams = randomize match {
+        val fnams = j != (config.maxrows - 1) || i != config.combis match {
           case true => Random.shuffle(fns)
-          case false => fns
+          case false => {
+            lastInImages = fns
+            lastIndex = idx
+            lastCols = cols
+            lastRows = rows
+            fns
+          }
         }
-
         montage(fnams, rows = rows, cols = cols, outfile = t1)
-        resize(t1, width, height, outfile)
+        resize(t1, config.width, config.height, outfile)
       }
     }
+    (1 to 20).foreach { i =>
+      val outfile = outdir / s"nadja_${idxStr(lastIndex + i)}.jpg"
+      def createFile(out: os.Path) = {
+        val t2 = os.temp()
+        montage(lastInImages, rows = lastRows, cols = lastCols, outfile = t2)
+        resize(t2, config.width, config.height, outfile)
+      }
+      FileCache.save("A", outfile, createFile)
+    }
+
     val videoFile = outdir / "nadjaMontage.mp4"
-    video(outdir, framerate, width, height, videoFile)
+    video(outdir, config.framerate, config.width, config.height, videoFile)
     println("------------------------------------------------------------------")
     println(s"Created video: ${videoFile}")
   }
@@ -290,7 +324,7 @@ object Main {
   }
 
 
-  def fienamesContinually(base: NBase, chars: List[NChar]): LazyList[os.Path] = {
+  def fienamesContinually(base: NBase, chars: Seq[NChar]): LazyList[os.Path] = {
     val cs = chars
       .flatMap { c => base.files.filter { f => f.char == c } }
       .map(f => Util.path(f, base.path))
