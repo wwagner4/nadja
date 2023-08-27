@@ -6,89 +6,71 @@ enum NChar {
   case N, A, D, J, CBL
 }
 
-val nadja = List(NChar.N, NChar.A, NChar.D, NChar.J, NChar.A )
+val nadja = List(NChar.N, NChar.A, NChar.D, NChar.J, NChar.A)
 
-case class NBase (
-  path: os.Path,
-  files: List[NFilename],
-)
+case class NBase(
+                  path: os.Path,
+                  files: List[NFilename],
+                )
 
 case class NFilename(
-  name: String,
-  char: NChar,
-  ext: String
-)
+                      name: String,
+                      char: NChar,
+                      ext: String
+                    )
 
 object Main {
 
   @main def mainEntryPoint: Unit = {
-    mainMontage()
-    // mainSwipe()
+    // mainTryout()
+    // mainMontage()
+    mainSwipe()
+  }
+
+  def mainTryout() = {
+    val s = "ABC".map(c => s"${c}")
+    println(s)
+
   }
 
   def mainSwipe() = {
 
-    def slowFactors(): Iterable[Int] = {
+    def slowFactorsIncreas(): Iterable[Int] = {
       def f(i: Int): Int = {
         if i < 1 then return 100
         if i < 20 then return 10
         if i < 40 then return 5
         if i < 60 then return 2
         return 1
-      }   
+      }
 
       LazyList.from(0)
         .map(f(_))
     }
 
-    def applySlowDown[T](in: Iterable[T]): Iterable[T] = {
+    def applySlowDown[T](in: Iterable[T], fSlow: () => Iterable[Int]): Iterable[T] = {
       in
-        .zip(slowFactors())
+        .zip(fSlow())
         .flatMap((a, i) => List.fill(i)(a))
     }
 
-    def mySlices[T](in: List[T], slizeLen: Int): Seq[List[T]] = {
+    def mySlices[T](in: Seq[T], slizeLen: Int): Seq[List[T]] = {
       val maxIndex = in.size - slizeLen
-      (0 to maxIndex).map(i => in.slice(i, i + slizeLen))
+      (0 to maxIndex).map(i => in.toList.slice(i, i + slizeLen))
     }
 
-    def doSwipe(base: NBase, len: Int, viewcols: Int, width: Int, height: Int, outdir: os.Path) = {
-
-      val visible = List(
-        ".",
-        ".",
-        ".",
-        ".",
-        ".",
-        ".",
-        ".",
-        "N",
-        "A",
-        "D",
-        "J",
-        "A",
-        ".",
-        ".",
-        ".",
-        ".",
-        ".",
-        ".",
-        ".",
-        ".",
-        ".",
-        ".",
-      ).map(Util.nChar)
-
-      val slices = LazyList.continually(mySlices(visible, viewcols)).flatten.drop(6)
-      val descs = applySlowDown(slices)
+    def doSwipe(base: NBase, config: SwipeConfig, outdir: os.Path) = {
+      val visible = config.pattern.map(c => s"${c}").map(Util.nChar)
+      val slices = LazyList.continually(mySlices(visible, config.viewcols)).flatten.drop(config.startDrop)
+      val descs = applySlowDown(slices, config.fSlow)
       descs
         .zipWithIndex
-        .take(len)
-        .foreach((desc, index) => createImage(base, desc, index, viewcols, width, height, outdir))
+        .take(config.videoFrames)
+        .foreach((desc, index) => createImage(base, desc, index, config.viewcols, config.width, config.height, outdir))
 
 
       val videoFile = outdir / "nadjaSwipe.mp4"
-      video(outdir, 30 , width, height, videoFile)
+      video(outdir, config.videoFramerate, config.width, config.height, videoFile)
       println("------------------------------------------------------------------")
       println(s"Created video: ${videoFile}")
 
@@ -102,7 +84,7 @@ object Main {
       def createFile(out: os.Path) = {
         val fns = fienamesContinually(base, descr).take(descr.size)
         val t1 = os.temp()
-        montage(fns, rows=1, cols=viewcols, outfile=t1)
+        montage(fns, rows = 1, cols = viewcols, outfile = t1)
         resize(t1, width, height, outfile)
       }
 
@@ -110,23 +92,43 @@ object Main {
       FileCache.save(key, outfile, createFile)
     }
 
-    val name = "monterey"
-    val id = "01"
-    val len = 500
-    val viewcols = 7
-    val width = 1000
-    val height = 800
+    case class SwipeConfig
+    (
+      name: String,
+      id: String,
+      width: Int,
+      height: Int,
+      videoFrames: Int,
+      videoFramerate: Int,
+      pattern: String,
+      viewcols: Int,
+      startDrop: Int,
+      fSlow: () => Iterable[Int],
+    )
+
+    val config = SwipeConfig(
+      name = "monterey",
+      id = "01",
+      videoFrames = 500,
+      videoFramerate = 40,
+      width = 1000,
+      height = 800,
+      pattern = ".......N.A.D.J.A........",
+      viewcols = 12,
+      startDrop = 6,
+      fSlow = slowFactorsIncreas,
+    )
 
     // val rootdir = os.pwd / "src" / "test" / "resources" / name
-    val rootdir = os.home / "work" / "nadja" / "name_chars" /  name
-    val outdir = os.home / "work" / "nadja" / "out" / "swipe" / s"${name}-${id}"
+    val rootdir = os.home / "work" / "nadja" / "name_chars" / config.name
+    val outdir = os.home / "work" / "nadja" / "out" / "swipe" / s"${config.name}-${config.id}"
     os.makeDir.all(outdir)
-    
+
     val resizedDir = os.temp.dir()
-    resizeAll(rootdir, 1200, resizedDir)
+    resizeAll(rootdir, config.width, resizedDir)
     val base = Util.createBase(resizedDir)
     println(s"base: ${base}")
-    doSwipe(base, len, viewcols, width, height, outdir)
+    doSwipe(base, config, outdir)
   }
 
 
@@ -141,12 +143,12 @@ object Main {
     val height = 1500
 
     // val rootdir = os.home / "work" / "nadja" / name
-    val rootdir = os.home / "work" / "nadja" / "name_chars" /  name
+    val rootdir = os.home / "work" / "nadja" / "name_chars" / name
     // val rootdir = os.pwd / "src" / "test" / "resources" / name
-    val outdir = os.home / "work" / "nadja" / "out" / "montage" /s"${name}-${id}"
+    val outdir = os.home / "work" / "nadja" / "out" / "montage" / s"${name}-${id}"
     os.makeDir.all(outdir)
-    
-    (0 until maxrows).foreach {j =>
+
+    (0 until maxrows).foreach { j =>
       val rows = maxrows - j
       val cols = Util.colsFromRows(rows)
       val sizedRootDir = os.temp.dir()
@@ -154,8 +156,8 @@ object Main {
       resizeAll(rootdir, size, sizedRootDir)
       val base = Util.createBase(sizedRootDir)
       val infiles = fienamesContinually(base, nadja)
-      (1 to combis).foreach {i =>
-        val outfile = outdir / s"nadja_${(j+1) * 100 + i}.jpg"
+      (1 to combis).foreach { i =>
+        val outfile = outdir / s"nadja_${(j + 1) * 100 + i}.jpg"
         val t1 = os.temp()
 
         val randomize = j != (maxrows - 1) || i != combis
@@ -167,12 +169,12 @@ object Main {
           case false => fns
         }
 
-        montage(fnams, rows=rows, cols=cols, outfile=t1)
+        montage(fnams, rows = rows, cols = cols, outfile = t1)
         resize(t1, width, height, outfile)
       }
     }
     val videoFile = outdir / "nadjaMontage.mp4"
-    video(outdir, framerate, width, height,videoFile)
+    video(outdir, framerate, width, height, videoFile)
     println("------------------------------------------------------------------")
     println(s"Created video: ${videoFile}")
   }
@@ -182,19 +184,19 @@ object Main {
 
     val cmd1 = List(
       "convert",
-      s"${infile}", 
+      s"${infile}",
       "-background",
-      "black", 
-      "-gravity", 
+      "black",
+      "-gravity",
       "center",
       "-resize",
-      geo1, 
-      "-extent", 
-      geo1,  
+      geo1,
+      "-extent",
+      geo1,
     ) ++
       List(
         s"${outfile}",
-    )
+      )
     println(cmd1.mkString(" \\\n"))
     Util.exe(cmd1)
   }
@@ -208,21 +210,21 @@ object Main {
       "-s",
       size,
       "-framerate",
-      frameRate.toString(), 
+      frameRate.toString(),
       "-pattern_type",
-      "glob", 
-      "-i", 
-      inpattern.toString(), 
+      "glob",
+      "-i",
+      inpattern.toString(),
       "-c:v",
-      "libx264", 
-      "-pix_fmt", 
+      "libx264",
+      "-pix_fmt",
       "yuv420p",
       "-crf",
       "25"
     ) ++
       List(
         s"${outfile}",
-    )
+      )
     println(cmd.mkString(" \\\n"))
     Util.exe(cmd)
   }
@@ -253,35 +255,35 @@ object Main {
   }
 
   def montage(infiles: Iterable[os.Path], rows: Int, cols: Int, outfile: os.Path) = {
-    val size = Util.sizeFromRows(rows) 
+    val size = Util.sizeFromRows(rows)
     val tilesgeo = s"${cols}x${rows}"
     val fnams = infiles
-          .take(rows * cols)
-          .toList
-          .map(_.toString())
+      .take(rows * cols)
+      .toList
+      .map(_.toString())
     val cmd = List(
-      "montage", 
-      "-fill", 
-      "black", 
-      "-background", 
-      "black", 
-      "-bordercolor", 
-      "black", 
+      "montage",
+      "-fill",
+      "black",
+      "-background",
+      "black",
+      "-bordercolor",
+      "black",
       "-resize",
       s"${size}x",
       "-gravity",
       "east",
       "-borderwidth",
-      "0", 
-      "-tile", 
-      tilesgeo, 
-      "-geometry", 
+      "0",
+      "-tile",
+      tilesgeo,
+      "-geometry",
       "+0+0",
     ) ++
-    fnams ++
-    List(
-      s"${outfile}",
-    )
+      fnams ++
+      List(
+        s"${outfile}",
+      )
 
     println(cmd.mkString(" \\\n"))
     Util.exe(cmd)
@@ -290,7 +292,7 @@ object Main {
 
   def fienamesContinually(base: NBase, chars: List[NChar]): LazyList[os.Path] = {
     val cs = chars
-      .flatMap {c =>  base.files.filter{f => f.char == c}}
+      .flatMap { c => base.files.filter { f => f.char == c } }
       .map(f => Util.path(f, base.path))
     if cs.isEmpty then throw IllegalArgumentException(s"found no files in ${base.path}")
     LazyList.continually(cs).flatten
@@ -344,25 +346,25 @@ object Util {
 
   def exe(cmdList: Seq[String]) = {
     val p = Process(cmdList)
-    val r  = p.run()
+    val r = p.run()
     if r.exitValue() != 0 then throw RuntimeException(s"Could not execute $cmdList")
   }
 
   def parseFilename(filename: String): Option[NFilename] = {
-    try 
+    try
       val a = filename.split("\\.")
       val b = a(0).split("_")
       val c = NChar.valueOf(b(1))
-      Some(NFilename(b(0), c, a(1)))  
+      Some(NFilename(b(0), c, a(1)))
     catch
       case _: Exception => {
         println(s"No image file ${filename}")
         None
-    }
+      }
   }
 
   def path(nfn: NFilename, root: os.Path): os.Path = {
-    val x = s"${nfn.name}_${nfn.char}.${nfn.ext}" 
+    val x = s"${nfn.name}_${nfn.char}.${nfn.ext}"
     root / x
   }
 }
