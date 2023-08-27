@@ -20,9 +20,23 @@ case class NFilename(
 object Main {
 
   @main def mainEntryPoint: Unit = {
-    // mainTryout()
-    mainMontage()
-    // mainSwipe()
+    val names = List(
+      "coverall",
+      "lineal",
+      "m",
+      "mandel",
+      "monterey",
+      "pampelmuse",
+      "pilze",
+      "shoes",
+    )
+
+    for name <- names do {
+      // mainTryout()
+      //mainMontage(name)
+      mainSwipe(name)
+    }
+
   }
 
   def mainTryout() = {
@@ -31,14 +45,14 @@ object Main {
 
   }
 
-  def mainSwipe() = {
+  def mainSwipe(name: String) = {
 
     def slowFactorsIncreas(): Iterable[Int] = {
       def f(i: Int): Int = {
         if i < 1 then return 100
-        if i < 20 then return 10
-        if i < 40 then return 5
-        if i < 60 then return 2
+        if i < 10 then return 10
+        if i < 20 then return 5
+        if i < 30 then return 2
         return 1
       }
 
@@ -57,20 +71,19 @@ object Main {
       (0 to maxIndex).map(i => in.toList.slice(i, i + slizeLen))
     }
 
-    def doSwipe(base: NBase, config: SwipeConfig, outdir: os.Path) = {
+    def doSwipe(base: NBase, config: SwipeConfig, outfile: os.Path) = {
       val visible = config.pattern.map(c => s"${c}").map(Util.nChar)
       val slices = LazyList.continually(mySlices(visible, config.viewcols)).flatten.drop(config.startDrop)
       val descs = applySlowDown(slices, config.fSlow)
+      val t1 = os.temp.dir()
       descs
         .zipWithIndex
         .take(config.videoFrames)
-        .foreach((desc, index) => createImage(base, desc, index, config.viewcols, config.width, config.height, outdir))
+        .foreach((desc, index) => createImage(base, desc, (config.videoFrames - 1) - index, config.viewcols, config.width, config.height, t1))
 
-
-      val videoFile = outdir / "nadjaSwipe.mp4"
-      video(outdir, config.videoFramerate, config.width, config.height, videoFile)
+      video(t1, config.videoFramerate, config.width, config.height, outfile)
       println("------------------------------------------------------------------")
-      println(s"Created video: ${videoFile}")
+      println(s"Created video: ${outfile}")
 
     }
 
@@ -86,13 +99,12 @@ object Main {
         resize(t1, width, height, outfile)
       }
 
-      val key = descr.mkString("")
+      val key = name + descr.mkString("")
       FileCache.save(key, outfile, createFile)
     }
 
     case class SwipeConfig
     (
-      name: String,
       id: String,
       width: Int,
       height: Int,
@@ -104,36 +116,45 @@ object Main {
       fSlow: () => Iterable[Int],
     )
 
+    // ########### SWIPE ###########
     val config = SwipeConfig(
-      name = "monterey",
-      id = "01",
+      id = "10",
       videoFrames = 500,
-      videoFramerate = 40,
+      videoFramerate = 20,
       width = 1000,
       height = 800,
-      pattern = ".......N.A.D.J.A........",
-      viewcols = 12,
-      startDrop = 6,
+      pattern = ".NADJA.NADJA.",
+      viewcols = 7,
+      startDrop = 0,
+      fSlow = slowFactorsIncreas,
+    )
+    val config1 = SwipeConfig(
+      id = "00",
+      videoFrames = 800,
+      videoFramerate = 30,
+      width = 1000,
+      height = 800,
+      pattern = ".....NADJA.....",
+      viewcols = 5,
+      startDrop = 5,
       fSlow = slowFactorsIncreas,
     )
 
     // val rootdir = os.pwd / "src" / "test" / "resources" / name
-    val rootdir = os.home / "work" / "nadja" / "name_chars" / config.name
-    val outdir = os.home / "work" / "nadja" / "out" / "swipe" / s"${config.name}-${config.id}"
-    os.makeDir.all(outdir)
+    val rootdir = os.home / "work" / "nadja" / "name_chars" / name
+    val outfile = os.home / "work" / "nadja" / "out" / s"swipe-${name}-${config.id}.mp4"
 
     val resizedDir = os.temp.dir()
     resizeAll(rootdir, config.width, resizedDir)
     val base = Util.createBase(resizedDir)
     println(s"base: ${base}")
-    doSwipe(base, config, outdir)
+    doSwipe(base, config, outfile)
   }
 
 
-  def mainMontage() = {
+  def mainMontage(name: String) = {
 
     case class MontageConfig(
-                              name: String,
                               id: String,
                               width: Int,
                               height: Int,
@@ -141,25 +162,26 @@ object Main {
                               maxrows: Int,
                               combis: Int,
                               framerate: Int,
+                              lastImageCount: Int
                             )
+    // ########### MONTAGE ###########
 
     val config = MontageConfig(
-      name = "pilze",
       id = "01",
       width = 2000,
       height = 1500,
       pattern = "NADJA",
-      maxrows = 10,
-      combis = 5,
-      framerate = 5,
+      maxrows = 8,
+      combis = 7,
+      framerate = 8,
+      lastImageCount = 50
     )
 
 
     // val rootdir = os.home / "work" / "nadja" / name
-    val rootdir = os.home / "work" / "nadja" / "name_chars" / config.name
-    // val rootdir = os.pwd / "src" / "test" / "resources" / config.name
-    val outdir = os.home / "work" / "nadja" / "out" / "montage" / s"${config.name}-${config.id}"
-    os.makeDir.all(outdir)
+    val rootdir = os.home / "work" / "nadja" / "name_chars" / name
+    // val rootdir = os.pwd / "src" / "test" / "resources" / name
+    val videofile = os.home / "work" / "nadja" / "out" / s"montage-${name}-${config.id}.mp4"
 
     def idxStr(i: Int): String = "%06d".format(i)
 
@@ -168,6 +190,7 @@ object Main {
     var lastIndex = 0
     var lastRows = 0
     var lastCols = 0
+    val framesdir = os.temp.dir()
     (0 until config.maxrows).foreach { j =>
       val rows = config.maxrows - j
       val cols = Util.colsFromRows(rows)
@@ -178,7 +201,7 @@ object Main {
       val infiles = fienamesContinually(base, nchars)
       (1 to config.combis).foreach { i =>
         val idx = (j + 1) * 100 + i
-        val outfile = outdir / s"nadja_${idxStr(idx)}.jpg"
+        val outfile = framesdir / s"nadja_${idxStr(idx)}.jpg"
         val t1 = os.temp()
         val fns = infiles
           .take(rows * cols)
@@ -197,20 +220,21 @@ object Main {
         resize(t1, config.width, config.height, outfile)
       }
     }
-    (1 to 20).foreach { i =>
-      val outfile = outdir / s"nadja_${idxStr(lastIndex + i)}.jpg"
+    (1 to config.lastImageCount).foreach { i =>
+      val outfile = framesdir / s"nadja_${idxStr(lastIndex + i)}.jpg"
+
       def createFile(out: os.Path) = {
         val t2 = os.temp()
         montage(lastInImages, rows = lastRows, cols = lastCols, outfile = t2)
-        resize(t2, config.width, config.height, outfile)
+        resize(t2, config.width, config.height, out)
       }
-      FileCache.save("A", outfile, createFile)
+
+      FileCache.save(name, outfile, createFile)
     }
 
-    val videoFile = outdir / "nadjaMontage.mp4"
-    video(outdir, config.framerate, config.width, config.height, videoFile)
+    video(framesdir, config.framerate, config.width, config.height, videofile)
     println("------------------------------------------------------------------")
-    println(s"Created video: ${videoFile}")
+    println(s"Created video: ${videofile}")
   }
 
   def resize(infile: os.Path, width: Int, height: Int, outfile: os.Path) = {
