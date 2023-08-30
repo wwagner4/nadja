@@ -2,10 +2,6 @@ import sys.process.Process
 import scala.jdk.CollectionConverters._
 import scala.util.Random
 
-enum NChar {
-  case N, A, D, J, CBL
-}
-
 case class NBase(
                   path: os.Path,
                   files: List[NFilename],
@@ -13,14 +9,14 @@ case class NBase(
 
 case class NFilename(
                       name: String,
-                      char: NChar,
+                      id: String,
                       ext: String
                     )
 
 object Main {
 
   @main def mainEntryPoint: Unit = {
-    val names = List(
+    val names1 = List(
       "coverall",
       "lineal",
       "m",
@@ -31,10 +27,14 @@ object Main {
       "shoes",
     )
 
+    val names = List(
+      "m",
+    )
+
     for name <- names do {
       // mainTryout()
-      //mainMontage(name)
-      mainSwipe(name)
+      mainMontage(name)
+      // mainSwipe(name)
     }
 
   }
@@ -72,7 +72,7 @@ object Main {
     }
 
     def doSwipe(base: NBase, config: SwipeConfig, outfile: os.Path) = {
-      val visible = config.pattern.map(c => s"${c}").map(Util.nChar)
+      val visible = config.pattern.map(c => s"${c}").map(Util.patternToFilenameId)
       val slices = LazyList.continually(mySlices(visible, config.viewcols)).flatten.drop(config.startDrop)
       val descs = applySlowDown(slices, config.fSlow)
       val t1 = os.temp.dir()
@@ -87,7 +87,7 @@ object Main {
 
     }
 
-    def createImage(base: NBase, descr: List[NChar], index: Int, viewcols: Int, width: Int, height: Int, outdir: os.Path) = {
+    def createImage(base: NBase, descr: List[String], index: Int, viewcols: Int, width: Int, height: Int, outdir: os.Path) = {
 
       val zi = "%04d".format(index)
       val outfile = outdir / s"nadja_${zi}.jpg"
@@ -185,7 +185,7 @@ object Main {
 
     def idxStr(i: Int): String = "%06d".format(i)
 
-    val nchars = config.pattern.map(c => s"${c}").map(Util.nChar)
+    val filenameIds = config.pattern.map(c => s"${c}").map(Util.patternToFilenameId)
     var lastInImages = List.empty[os.Path]
     var lastIndex = 0
     var lastRows = 0
@@ -198,7 +198,7 @@ object Main {
       val size = Util.sizeFromRows(rows)
       resizeAll(rootdir, size, sizedRootDir)
       val base = Util.createBase(sizedRootDir)
-      val infiles = fienamesContinually(base, nchars)
+      val infiles = fienamesContinually(base, filenameIds)
       (1 to config.combis).foreach { i =>
         val idx = (j + 1) * 100 + i
         val outfile = framesdir / s"nadja_${idxStr(idx)}.jpg"
@@ -348,9 +348,9 @@ object Main {
   }
 
 
-  def fienamesContinually(base: NBase, chars: Seq[NChar]): LazyList[os.Path] = {
-    val cs = chars
-      .flatMap { c => base.files.filter { f => f.char == c } }
+  def fienamesContinually(base: NBase, ids: Seq[String]): LazyList[os.Path] = {
+    val cs = ids
+      .flatMap { c => base.files.filter { f => f.id == c } }
       .map(f => Util.path(f, base.path))
     if cs.isEmpty then throw IllegalArgumentException(s"found no files in ${base.path}")
     LazyList.continually(cs).flatten
@@ -360,14 +360,12 @@ object Main {
 
 object Util {
 
-  def nChar(c: String): NChar = {
-    c match {
-      case "N" => NChar.N
-      case "A" => NChar.A
-      case "D" => NChar.D
-      case "J" => NChar.J
-      case "." => NChar.CBL
-      case _ => throw IllegalArgumentException(s"Unknown character '${c}' for creating NChar")
+  def patternToFilenameId(pattern: String): String = {
+    if pattern.size == 0 then throw IllegalStateException("Pattern character must not be empty")
+    if pattern.size > 1 then throw IllegalStateException(s"Pattern string must be one character. ${pattern} is illegal")
+    pattern match {
+      case "." => "CBL"
+      case a => a
     }
   }
 
@@ -412,7 +410,7 @@ object Util {
     try
       val a = filename.split("\\.")
       val b = a(0).split("_")
-      val c = NChar.valueOf(b(1))
+      val c = b(1)
       Some(NFilename(b(0), c, a(1)))
     catch
       case _: Exception => {
@@ -422,7 +420,7 @@ object Util {
   }
 
   def path(nfn: NFilename, root: os.Path): os.Path = {
-    val x = s"${nfn.name}_${nfn.char}.${nfn.ext}"
+    val x = s"${nfn.name}_${nfn.id}.${nfn.ext}"
     root / x
   }
 }
