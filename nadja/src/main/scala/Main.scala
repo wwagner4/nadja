@@ -1,5 +1,6 @@
+import scala.collection.Iterable
 import sys.process.Process
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 import scala.util.Random
 
 case class NBase(
@@ -13,10 +14,17 @@ case class NFilename(
                       ext: String
                     )
 
+case class Canvas(
+                   rows: Int,
+                   cols: Int,
+                   ids: Iterable[String],
+                 )
+
+
 object Main {
 
   @main def mainEntryPoint: Unit = {
-    val names1 = List(
+    val names = List(
       "coverall",
       "lineal",
       "m",
@@ -27,14 +35,11 @@ object Main {
       "shoes",
     )
 
-    val names = List(
-      "m",
-    )
-
     for name <- names do {
       // mainTryout()
-      mainMontage(name)
+      //mainMontage(name)
       // mainSwipe(name)
+      mainPulse(name)
     }
 
   }
@@ -44,6 +49,86 @@ object Main {
     println(s)
 
   }
+
+  def mainTryoutResize(name: String) = {
+    println(s"Creating pulse for ${name}")
+
+    // val rootdir = os.pwd / "src" / "test" / "resources" / name
+    val rootdir = os.home / "work" / "nadja" / "name_chars" / name
+    val outfile = os.home / "work" / "nadja" / "out" / s"pulse-${name}-00.mp4"
+
+    val outdir = os.home / "work" / "nadja" / "tmp"
+    os.makeDir.all(outdir)
+
+    os.list(rootdir).foreach(f => {
+      println(s"resize ${f}")
+      val f1 = f.last
+      val outfile = outdir / f1
+      println(outfile)
+      val w = 500
+      val h = 1000
+      resize(f, 100, 1000, outfile)
+    })
+  }
+
+  def mainPulse(name: String) = {
+
+    case class PulseConfig
+    (
+      id: String,
+      width: Int,
+      height: Int,
+      frameCount: Int
+    )
+
+    val config = PulseConfig(
+      id = "00",
+      width = 1200,
+      height = 900,
+      frameCount = 100
+    )
+
+    println(s"Creating pulse for ${name}")
+
+    // val rootdir = os.pwd / "src" / "test" / "resources" / name
+    val rootdir = os.home / "work" / "nadja" / "name_chars" / name
+    val outfile = os.home / "work" / "nadja" / "out" / s"pulse-${name}-${config.id}.mp4"
+
+    val pattern =
+      """.......
+        |.NADJA.
+        |.......
+        |""".stripMargin
+
+    val canvas = Util.patternToCanvas(pattern)
+
+    val bases = List(1.0, 0.7, 0.5, 0.3)
+      .map { sf =>
+        val resizedDir = os.temp.dir()
+        val w = Util.roundToEven(config.width / canvas.cols)
+        val h = Util.roundToEven(w / sf)
+        os.list(rootdir)
+          .filter(f => os.isFile(f))
+          .foreach(f => {
+            val resizedFile = resizedDir / f.last
+            resize(f, w, h, resizedFile)
+          })
+        Util.createBase(resizedDir)
+      }
+    val frameImagesDir = os.temp.dir()
+    for i <- (0 until config.frameCount) do {
+      val basesList = LazyList.continually(bases).flatten.take(canvas.rows * canvas.cols).toList
+      val rBases = Random.shuffle(basesList)
+      val filenames = canvas.ids.zip(rBases).map { (id, base) =>
+        filenameFromBase(base, id)
+      }
+      val cnt_str = "%05d".format(i)
+      val outfile = frameImagesDir / s"frame_${cnt_str}.jpg"
+      montage(filenames, canvas.rows, canvas.cols, outfile)
+    }
+    video(frameImagesDir, 10, config.width, config.height, outfile, ext = "jpg")
+  }
+
 
   def mainSwipe(name: String) = {
 
@@ -259,8 +344,8 @@ object Main {
     Util.exe(cmd1)
   }
 
-  def video(indir: os.Path, frameRate: Int, width: Int, height: Int, outfile: os.Path) = {
-    val inpattern = indir / "*.jpg"
+  def video(indir: os.Path, frameRate: Int, width: Int, height: Int, outfile: os.Path, ext: String = "jpg") = {
+    val inpattern = indir / s"*.${ext}"
     val size = s"${width}x${height}"
     val cmd = List(
       "ffmpeg",
@@ -292,7 +377,8 @@ object Main {
 
   def resizeAll(indir: os.Path, size: Int, outdir: os.Path) = {
 
-    val geo = s"${size}x${size}"
+    val s = Util.roundToEven(size)
+    val geo = s"${s}x${s}"
 
     def rs(f: os.Path) = {
       val cmd = Seq(
@@ -356,6 +442,11 @@ object Main {
     LazyList.continually(cs).flatten
   }
 
+  def filenameFromBase
+  (base: NBase, id: String): os.Path = {
+    val fn = base.files.filter { f => f.id == id }.head
+    Util.path(fn, base.path)
+  }
 }
 
 object Util {
@@ -368,6 +459,17 @@ object Util {
       case a => a
     }
   }
+
+  def patternToCanvas(pattern: String): Canvas = {
+    val theRows = pattern.split("\\n")
+    val cols = theRows.map(_.size).min
+    val rows = theRows.size
+    val ids = pattern
+      .filter(c => c != '\n')
+      .map(c => Util.patternToFilenameId(s"${c}"))
+    Canvas(rows, cols, ids)
+  }
+
 
   def colsFromRows(rows: Int): Int = {
     rows match {
@@ -423,5 +525,11 @@ object Util {
     val x = s"${nfn.name}_${nfn.id}.${nfn.ext}"
     root / x
   }
+
+  def roundToEven(value: Double): Int = {
+    val i = (value + 0.5).toInt
+    i - i % 2
+  }
+
 }
 
