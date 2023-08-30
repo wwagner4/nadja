@@ -117,7 +117,7 @@ object Main {
     )
 
     // ########### SWIPE ###########
-    val config = SwipeConfig(
+    val config1 = SwipeConfig(
       id = "10",
       videoFrames = 500,
       videoFramerate = 20,
@@ -128,11 +128,11 @@ object Main {
       startDrop = 0,
       fSlow = slowFactorsIncreas,
     )
-    val config1 = SwipeConfig(
-      id = "00",
-      videoFrames = 800,
+    val config = SwipeConfig(
+      id = "01",
+      videoFrames = 400,
       videoFramerate = 30,
-      width = 1000,
+      width = 600,
       height = 800,
       pattern = ".....NADJA.....",
       viewcols = 5,
