@@ -54,7 +54,7 @@ class MySuite extends munit.FunSuite {
       val expectedCols = 3
       val expectedIds = List("CBL", "CBL", "CBL", "A", "B", "C", "CBL", "CBL", "CBL")
 
-      val canvas = Util.patternToCanvas(pattern)
+      val canvas = MagickUtil.patternToCanvas(pattern)
       assertEquals(canvas.rows, expectedRows)
       assertEquals(canvas.cols, expectedCols)
       assertEquals(canvas.ids.take(expectedRows * expectedCols), expectedIds)
@@ -68,7 +68,7 @@ class MySuite extends munit.FunSuite {
     (2055, 2054)
   ).foreach { (in, expected) => {
     test(s"round to even ${in}") {
-      assertEquals(Util.roundToEven(in), expected)
+      assertEquals(MagickUtil.roundToEven(in), expected)
     }
 
   }
@@ -83,7 +83,7 @@ class MySuite extends munit.FunSuite {
     (2056.49, 2056),
   ).foreach { (in, expected) => {
     test(s"round to even ${in}") {
-      assertEquals(Util.roundToEven(in), expected)
+      assertEquals(MagickUtil.roundToEven(in), expected)
     }
 
   }
