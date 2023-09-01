@@ -1,12 +1,9 @@
 import java.awt.Graphics2D
 import java.awt.geom.AffineTransform
-import java.awt.image.BufferedImage
-import java.awt.image.AffineTransformOp
+import java.awt.image.{AffineTransformOp, BufferedImage}
 import javax.imageio.ImageIO
 import scala.collection.Iterable
-import sys.process.Process
 import scala.jdk.CollectionConverters.*
-import scala.util.Random
 
 case class NBase(
                   path: os.Path,
