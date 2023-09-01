@@ -19,11 +19,11 @@ case class NFilename(
                       ext: String
                     )
 
-case class Canvas(
-                   rows: Int,
-                   cols: Int,
-                   ids: Iterable[String],
-                 )
+case class NCanvas(
+                    rows: Int,
+                    cols: Int,
+                    ids: Iterable[String],
+                  )
 
 case class NImage(
                    filename: NFilename,
@@ -57,6 +57,9 @@ object Main {
 
   }
 
+  enum Alignment {
+    case START, CENTER, END
+  }
 
   def mainTryout(name: String) = {
 
@@ -66,7 +69,7 @@ object Main {
                        height: Int,
                      )
 
-    val config = Config("00", 2000, 2000)
+    val config = Config("00", 2000, 1500)
 
     println(s"Creating pulse for ${name}")
 
@@ -84,26 +87,36 @@ object Main {
       createNImage(base, fn)
     }
 
-    for i <- (0 to 10) do {
+    val pattern = "NADJA"
+    val nCanvas = Util.patternToCanvas(pattern)
+    val images1 = nCanvas.ids.flatMap { id => images.filter(i => i.filename.id == id) }.toSeq
+
+
+    val n = 50
+    for i <- (0 to n) do {
       val canvas = createCanvas(config.width, config.height)
-      val image = Random.shuffle(images).head
-      val scaled = scaleImage(image, 400.0 + Random.nextDouble() * 200)
-      drawImage(canvas, scaled, Random.nextDouble(), Random.nextDouble())
+      val imgWidth = canvas.getWidth() / images1.size
+      for (img, j) <- images1.zipWithIndex do {
+        val pop = if (i + j) % 10 == 0 then 40 else 0
+        val scaled = scaleImage(img, imgWidth + pop)
+        val x = j.toDouble / images1.size
+        val y = 0.5
+        drawImage(canvas, scaled, x, y, xAlign = Alignment.START)
+      }
       val fileName = f"a_${i}%05d.jpg"
       val file = t1 / fileName
       val f1 = file.toIO
       val r = ImageIO.write(canvas, "jpg", f1)
       println(s"wrote to ${f1} ${r}")
     }
-    // Util.video(t1, 10, config.width, config.height, outfile)
-    //println(s"Wrote video to ${outfile}")
+    Util.video(t1, 8, config.width, config.height, outfile)
+    println(s"Wrote video to ${outfile}")
   }
 
   def scaleImage(image: NImage, width: Double): BufferedImage = {
     val iw = image.bufferedImage.getWidth()
     val _fw = width / iw
     val ih = image.bufferedImage.getHeight()
-    println(s":: scale: ${width} ${_fw}")
     val at = AffineTransform()
     at.scale(_fw, _fw)
     val op = AffineTransformOp(at, AffineTransformOp.TYPE_BICUBIC)
@@ -112,17 +125,33 @@ object Main {
     dest
   }
 
-  def drawImage(canvas: BufferedImage, image: BufferedImage, xpos: Double, ypos: Double) = {
+  def drawImage(
+                 canvas: BufferedImage,
+                 image: BufferedImage,
+                 xpos: Double,
+                 ypos: Double,
+                 xAlign: Alignment = Alignment.CENTER,
+                 yAlign: Alignment = Alignment.CENTER,
+               ) = {
     val cw = canvas.getWidth()
     val x1 = cw * xpos
     val ch = canvas.getHeight()
     val y1 = ch * ypos
-    val x = x1 - image.getWidth() / 2.0
-    val y = y1 - image.getHeight() / 2.0
+    val x = xAlign match {
+      case Alignment.START => x1
+      case Alignment.CENTER => x1 - image.getWidth() / 2.0
+      case Alignment.END => x1 - image.getWidth()
+    }
+    val y = yAlign match {
+      case Alignment.START => y1
+      case Alignment.CENTER => y1 - image.getHeight() / 2.0
+      case Alignment.END => y1 - image.getHeight()
+    }
     val graphics = canvas.getGraphics.asInstanceOf[Graphics2D]
     graphics.drawImage(image, x.toInt, y.toInt, null)
     graphics.dispose()
   }
+
 
   def createCanvas(width: Int, height: Int): BufferedImage = {
     BufferedImage(width, height, BufferedImage.TYPE_INT_RGB)

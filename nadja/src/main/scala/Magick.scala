@@ -55,7 +55,7 @@ object Magick {
         |.......
         |""".stripMargin
 
-    val canvas = MagickUtil.patternToCanvas(pattern)
+    val canvas = Util.patternToCanvas(pattern)
 
     val bases = List(1.0, 0.7, 0.5, 0.3)
       .map { sf =>
@@ -75,7 +75,7 @@ object Magick {
       val basesList = LazyList.continually(bases).flatten.take(canvas.rows * canvas.cols).toList
       val rBases = Random.shuffle(basesList)
       val filenames = canvas.ids.zip(rBases).map { (id, base) =>
-        Util.filenameFromBase(base, id)
+        MagickUtil.filenameFromBase(base, id)
       }
       val cnt_str = "%05d".format(i)
       val outfile = frameImagesDir / s"frame_${cnt_str}.jpg"
@@ -112,7 +112,7 @@ object Magick {
     }
 
     def doSwipe(base: NBase, config: SwipeConfig, outfile: os.Path) = {
-      val visible = config.pattern.map(c => s"${c}").map(MagickUtil.patternToFilenameId)
+      val visible = config.pattern.map(c => s"${c}").map(Util.patternToFilenameId)
       val slices = LazyList.continually(mySlices(visible, config.viewcols)).flatten.drop(config.startDrop)
       val descs = applySlowDown(slices, config.fSlow)
       val t1 = os.temp.dir()
@@ -133,7 +133,7 @@ object Magick {
       val outfile = outdir / s"nadja_${zi}.jpg"
 
       def createFile(out: os.Path) = {
-        val fns = Util.fienamesContinually(base, descr).take(descr.size)
+        val fns = MagickUtil.fienamesContinually(base, descr).take(descr.size)
         val t1 = os.temp()
         montage(fns, rows = 1, cols = viewcols, outfile = t1)
         resize(t1, width, height, outfile)
@@ -225,7 +225,7 @@ object Magick {
 
     def idxStr(i: Int): String = "%06d".format(i)
 
-    val filenameIds = config.pattern.map(c => s"${c}").map(MagickUtil.patternToFilenameId)
+    val filenameIds = config.pattern.map(c => s"${c}").map(Util.patternToFilenameId)
     var lastInImages = List.empty[os.Path]
     var lastIndex = 0
     var lastRows = 0
@@ -238,7 +238,7 @@ object Magick {
       val size = MagickUtil.sizeFromRows(rows)
       resizeAll(rootdir, size, sizedRootDir)
       val base = Util.createBase(sizedRootDir)
-      val infiles = Util.fienamesContinually(base, filenameIds)
+      val infiles = MagickUtil.fienamesContinually(base, filenameIds)
       (1 to config.combis).foreach { i =>
         val idx = (j + 1) * 100 + i
         val outfile = framesdir / s"nadja_${idxStr(idx)}.jpg"
@@ -364,26 +364,6 @@ object Magick {
 
 object MagickUtil {
 
-  def patternToFilenameId(pattern: String): String = {
-    if pattern.size == 0 then throw IllegalStateException("Pattern character must not be empty")
-    if pattern.size > 1 then throw IllegalStateException(s"Pattern string must be one character. ${pattern} is illegal")
-    pattern match {
-      case "." => "CBL"
-      case a => a
-    }
-  }
-
-  def patternToCanvas(pattern: String): Canvas = {
-    val theRows = pattern.split("\\n")
-    val cols = theRows.map(_.size).min
-    val rows = theRows.size
-    val ids = pattern
-      .filter(c => c != '\n')
-      .map(c => MagickUtil.patternToFilenameId(s"${c}"))
-    Canvas(rows, cols, ids)
-  }
-
-
   def colsFromRows(rows: Int): Int = {
     rows match {
       case 1 => 5
@@ -409,5 +389,16 @@ object MagickUtil {
     i - i % 2
   }
 
+  def fienamesContinually(base: NBase, ids: Seq[String]): LazyList[os.Path] = {
+    val cs = ids
+      .flatMap { c => base.files.filter { f => f.id == c } }
+      .map(f => Util.path(f, base.path))
+    if cs.isEmpty then throw IllegalArgumentException(s"found no files in ${base.path}")
+    LazyList.continually(cs).flatten
+  }
 
+  def filenameFromBase(base: NBase, id: String): os.Path = {
+    val fn = base.files.filter { f => f.id == id }.head
+    Util.path(fn, base.path)
+  }
 }

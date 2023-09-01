@@ -54,7 +54,7 @@ class MySuite extends munit.FunSuite {
       val expectedCols = 3
       val expectedIds = List("CBL", "CBL", "CBL", "A", "B", "C", "CBL", "CBL", "CBL")
 
-      val canvas = MagickUtil.patternToCanvas(pattern)
+      val canvas = Util.patternToCanvas(pattern)
       assertEquals(canvas.rows, expectedRows)
       assertEquals(canvas.cols, expectedCols)
       assertEquals(canvas.ids.take(expectedRows * expectedCols), expectedIds)

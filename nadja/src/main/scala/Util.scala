@@ -30,20 +30,6 @@ object Util {
     exe(cmd)
   }
 
-  def fienamesContinually(base: NBase, ids: Seq[String]): LazyList[os.Path] = {
-    val cs = ids
-      .flatMap { c => base.files.filter { f => f.id == c } }
-      .map(f => path(f, base.path))
-    if cs.isEmpty then throw IllegalArgumentException(s"found no files in ${base.path}")
-    LazyList.continually(cs).flatten
-  }
-
-  def filenameFromBase
-  (base: NBase, id: String): os.Path = {
-    val fn = base.files.filter { f => f.id == id }.head
-    path(fn, base.path)
-  }
-
   def createBase(path: os.Path): NBase = {
 
     val files = os.list(path)
@@ -74,10 +60,28 @@ object Util {
       }
   }
 
-
   def path(nfn: NFilename, root: os.Path): os.Path = {
     val x = s"${nfn.name}_${nfn.id}.${nfn.ext}"
     root / x
+  }
+
+  def patternToFilenameId(pattern: String): String = {
+    if pattern.size == 0 then throw IllegalStateException("Pattern character must not be empty")
+    if pattern.size > 1 then throw IllegalStateException(s"Pattern string must be one character. ${pattern} is illegal")
+    pattern match {
+      case "." => "CBL"
+      case a => a
+    }
+  }
+
+  def patternToCanvas(pattern: String): NCanvas = {
+    val theRows = pattern.split("\\n")
+    val cols = theRows.map(_.size).min
+    val rows = theRows.size
+    val ids = pattern
+      .filter(c => c != '\n')
+      .map(c => patternToFilenameId(s"${c}"))
+    NCanvas(rows, cols, ids)
   }
 
 
