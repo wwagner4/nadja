@@ -207,7 +207,7 @@ object Magick {
     // ########### MONTAGE ###########
 
     val config = MontageConfig(
-      id = "01",
+      id = "02",
       width = 2000,
       height = 1500,
       pattern = "NADJA",

@@ -4,6 +4,7 @@ import java.awt.image.{AffineTransformOp, BufferedImage}
 import javax.imageio.ImageIO
 import scala.collection.Iterable
 import scala.jdk.CollectionConverters.*
+import scala.util.Random
 
 case class NBase(
                   path: os.Path,
@@ -31,23 +32,32 @@ case class NImage(
 object Main {
 
   @main def mainEntryPoint: Unit = {
-    val names1 = List(
-      "coverall",
-      "lineal",
-      "m",
-      "mandel",
+    val names = List(
+      //"coverall",
+      //"darlingkarte",
+      //"eisen",
+      //"farn",
+      //"gold",
+      //"lineal",
+      //"m",
+      //"mandel",
+      "lovetree",
+      "mill",
       "monterey",
       "pampelmuse",
+      "paris",
       "pilze",
+      "schatten",
       "shoes",
+      "yellow",
     )
-    val names = List(
+    val names1 = List(
       "lineal",
     )
 
     for name <- names do {
-      mainTryout(name)
-      //Magick.mainMontage(name)
+      mainPuls(name)
+      Magick.mainMontage(name)
       //Magick.mainSwipe(name)
       //Magick.mainPulse(name)
     }
@@ -58,23 +68,26 @@ object Main {
     case START, CENTER, END
   }
 
-  def mainTryout(name: String) = {
+  def mainPuls(name: String) = {
 
-    case class Config(
-                       id: String,
-                       width: Int,
-                       height: Int,
-                     )
+    case class PulsConfig(
+                           id: String,
+                           width: Int,
+                           height: Int,
+                           frameCount: Int,
+                           frameRate: Int,
+                           popFactor: Double
 
-    val config = Config("00", 2000, 1500)
+                         )
+
+    val config = PulsConfig("01", 2000, 1500, 50, 10, 0.4)
 
     println(s"Creating pulse for ${name}")
 
     // val rootdir = os.pwd / "src" / "test" / "resources" / name
     val rootdir = os.home / "work" / "nadja" / "name_chars" / name
     val outfile = os.home / "work" / "nadja" / "out" / s"pulse-${name}-${config.id}.mp4"
-    val t1 = os.home / "work" / "nadja" / "out" / "t1"
-    os.makeDir.all(t1)
+    val t1 = os.temp.dir()
 
     println(s"rootdir : ${rootdir}")
     println(s"outfile : ${outfile}")
@@ -86,17 +99,17 @@ object Main {
 
     val pattern = "NADJA"
     val nCanvas = Util.patternToCanvas(pattern)
-    val images1 = nCanvas.ids.flatMap { id => images.filter(i => i.filename.id == id) }.toSeq
+    val patternImages = nCanvas.ids.flatMap { id => images.filter(i => i.filename.id == id) }.toSeq
 
 
-    val n = 50
-    for i <- (0 to n) do {
+    for i <- (0 to config.frameCount) do {
       val canvas = createCanvas(config.width, config.height)
-      val imgWidth = canvas.getWidth() / images1.size
-      for (img, j) <- images1.zipWithIndex do {
-        val pop = if (i + j) % 10 == 0 then 40 else 0
+      val imgWidth = canvas.getWidth() / patternImages.size
+      for (img, j) <- patternImages.zipWithIndex do {
+        //val pop = if (i + j) % 10 == 0 then imgWidth * config.popFactor else 0
+        val pop = if Random.nextDouble() > 0.8 then imgWidth * config.popFactor else 0
         val scaled = scaleImage(img, imgWidth + pop)
-        val x = j.toDouble / images1.size
+        val x = j.toDouble / patternImages.size
         val y = 0.5
         drawImage(canvas, scaled, x, y, xAlign = Alignment.START)
       }
