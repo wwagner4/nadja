@@ -2,7 +2,7 @@ import scala.sys.process.Process
 
 object Util {
 
-      def video(indir: os.Path, frameRate: Int, width: Int, height: Int, outfile: os.Path, ext: String = "jpg") = {
+  def video(indir: os.Path, frameRate: Int, width: Int, height: Int, outfile: os.Path, ext: String = "jpg") = {
     val inpattern = indir / s"*.${ext}"
     val size = s"${width}x${height}"
     val cmd = List(
@@ -44,7 +44,7 @@ object Util {
     path(fn, base.path)
   }
 
-    def createBase(path: os.Path): NBase = {
+  def createBase(path: os.Path): NBase = {
 
     val files = os.list(path)
       .toList
@@ -73,6 +73,7 @@ object Util {
         None
       }
   }
+
 
   def path(nfn: NFilename, root: os.Path): os.Path = {
     val x = s"${nfn.name}_${nfn.id}.${nfn.ext}"
