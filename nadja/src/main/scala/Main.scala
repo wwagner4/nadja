@@ -28,11 +28,22 @@ case class NImage(
                    bufferedImage: BufferedImage,
                  )
 
+enum Alignment {
+  case START, CENTER, END
+}
+
+case class NImagePosition (
+  image: NImage,
+  x: Double,
+  y: Double,
+  width: Double,
+  align: Alignment,
+) 
 
 object Main {
 
   @main def mainEntryPoint: Unit = {
-    val names = List(
+    val names1 = List(
       //"coverall",
       //"darlingkarte",
       //"eisen",
@@ -51,21 +62,18 @@ object Main {
       "shoes",
       "yellow",
     )
-    val names1 = List(
+    val names = List(
       "lineal",
     )
 
     for name <- names do {
-      mainPuls(name)
-      Magick.mainMontage(name)
-      //Magick.mainSwipe(name)
-      //Magick.mainPulse(name)
+      // mainPuls(name)
+      mainExplode(name)
+      // Magick.mainMontage(name)
+      // Magick.mainSwipe(name)
+      // Magick.mainPulse(name)
     }
 
-  }
-
-  enum Alignment {
-    case START, CENTER, END
   }
 
   def mainPuls(name: String) = {
@@ -76,16 +84,15 @@ object Main {
                            height: Int,
                            frameCount: Int,
                            frameRate: Int,
-                           popFactor: Double
-
+                           popFactor: Double,
                          )
 
-    val config = PulsConfig("01", 2000, 1500, 50, 10, 0.4)
+    val config = PulsConfig("01", 2000, 1500, 20, 10, 1.2)
 
     println(s"Creating pulse for ${name}")
 
-    // val rootdir = os.pwd / "src" / "test" / "resources" / name
-    val rootdir = os.home / "work" / "nadja" / "name_chars" / name
+    val rootdir = os.pwd / "src" / "test" / "resources" / name
+    // val rootdir = os.home / "work" / "nadja" / "name_chars" / name
     val outfile = os.home / "work" / "nadja" / "out" / s"pulse-${name}-${config.id}.mp4"
     val t1 = os.temp.dir()
 
@@ -94,33 +101,132 @@ object Main {
 
     val base = Util.createBase(rootdir)
     val images = base.files.map { fn =>
-      createNImage(base, fn)
+      ImageIoUtil.createNImage(base, fn)
     }
 
     val pattern = "NADJA"
     val nCanvas = Util.patternToCanvas(pattern)
     val patternImages = nCanvas.ids.flatMap { id => images.filter(i => i.filename.id == id) }.toSeq
 
-
-    for i <- (0 to config.frameCount) do {
-      val canvas = createCanvas(config.width, config.height)
-      val imgWidth = canvas.getWidth() / patternImages.size
-      for (img, j) <- patternImages.zipWithIndex do {
-        //val pop = if (i + j) % 10 == 0 then imgWidth * config.popFactor else 0
-        val pop = if Random.nextDouble() > 0.8 then imgWidth * config.popFactor else 0
-        val scaled = scaleImage(img, imgWidth + pop)
-        val x = j.toDouble / patternImages.size
-        val y = 0.5
-        drawImage(canvas, scaled, x, y, xAlign = Alignment.START)
-      }
-      val fileName = f"a_${i}%05d.jpg"
-      val file = t1 / fileName
-      val f1 = file.toIO
-      val r = ImageIO.write(canvas, "jpg", f1)
-      println(s"wrote to ${f1} ${r}")
+    val positions: Iterable[Iterable[NImagePosition]] = ImageIoUtil.pulsePositions(patternImages, config.frameCount, config.popFactor)
+    for (ip, i) <- positions.zipWithIndex do {
+      val canvas = ImageIoUtil.createCanvas(config.width, config.height)
+      ImageIoUtil.createImageFile(canvas, ip, i, t1)
     }
-    Util.video(t1, 8, config.width, config.height, outfile)
+
+    Util.video(t1, config.frameRate, config.width, config.height, outfile)
     println(s"Wrote video to ${outfile}")
+  }
+
+}
+
+def mainExplode(name: String) = {
+
+  case class ExplodeConfig(
+                          id: String,
+                          width: Int,
+                          height: Int,
+                          frameCount: Int,
+                          framesToLeave: Int,
+                          frameRate: Int,
+                        )
+
+  val config = ExplodeConfig("02", 2000, 1500, 200, 60, 40)
+
+  println(s"Creating explode for ${name}")
+
+  val rootdir = os.pwd / "src" / "test" / "resources" / name
+  // val rootdir = os.home / "work" / "nadja" / "name_chars" / name
+  val outfile = os.home / "work" / "nadja" / "out" / s"explode-${name}-${config.id}.mp4"
+  val t1 = os.temp.dir()
+
+  println(s"rootdir : ${rootdir}")
+  println(s"outfile : ${outfile}")
+
+  val base = Util.createBase(rootdir)
+  val images = base.files.map { fn =>
+    ImageIoUtil.createNImage(base, fn)
+  }
+
+  val pattern = "NADJA"
+  val nCanvas = Util.patternToCanvas(pattern)
+  val patternImages = nCanvas.ids.flatMap { id => images.filter(i => i.filename.id == id) }.toSeq
+
+  val p1 = explodePositions(patternImages, (config.frameCount * 0.5).toInt, config.framesToLeave, false).toList.reverse
+  val p2 = explodePositions(patternImages, config.frameCount, config.framesToLeave, true).toList
+  val positions = p1 ++ p2
+  for (ip, i) <- positions.zipWithIndex do {
+    val canvas = ImageIoUtil.createCanvas(config.width, config.height)
+    ImageIoUtil.createImageFile(canvas, ip, i, t1)
+  }
+
+  Util.video(t1, config.frameRate, config.width, config.height, outfile)
+  println(s"Wrote video to ${outfile}")
+
+}
+
+def explodePositions(images: Iterable[NImage], frameCount: Int, framesToLeave: Double, endless: Boolean): Iterable[Iterable[NImagePosition]] = {
+
+  def fBase(a: Double, k: Double)(x: Double): Double = a + x * k
+
+  def randomK(): Double = {
+    val k1 = if Random.nextBoolean() 
+    then framesToLeave - Random.nextDouble() * framesToLeave * 0.5 
+    else Random.nextDouble() * framesToLeave * 0.5 - framesToLeave
+    1.0 / k1
+  }
+
+  def thorus(x: Double): Double = {
+    if x < -0.2 then thorus(x + 1.4)
+    else if x > 1.2 then thorus(x - 1.4)
+    else x
+  }
+
+  //val x = j.toDouble / images.size
+  val fySeq: Seq[Double => Double] = (0 until images.size).map{i => fBase(0.5, randomK()) }
+  val fxSeq: Seq[Double => Double] = (0 until images.size).map{i => fBase(i.toDouble / images.size, randomK()) }
+  for i <- (0 to frameCount) yield {
+    val positions = for (img, j) <- images.zipWithIndex yield {
+      val width = 1.0 / images.size 
+      val x = if endless then thorus(fxSeq(j)(i)) else fxSeq(j)(i)
+      val y = if endless then thorus(fxSeq(j)(i)) else fySeq(j)(i)
+      val align = Alignment.START
+      println(s"Created image image ${j} y:${y}")
+      NImagePosition(img, x, y,width, align)
+    }
+    println(s"Created positions for image ${i}")
+    positions
+  }
+}
+
+object ImageIoUtil {
+
+  def pulsePositions(images: Iterable[NImage], frameCount: Int, popFactor: Double): Iterable[Iterable[NImagePosition]] = {
+    for i <- (0 to frameCount) yield {
+      val positions = for (img, j) <- images.zipWithIndex yield {
+        val width = (if Random.nextDouble() > 0.8 then popFactor else 1.0) / images.size 
+        //val w0 = (if (i + j) % 10 == 0 then config.popFactor else 1.0) / patternImages.size 
+        val x = j.toDouble / images.size
+        val y = 0.5
+        val align = Alignment.START
+        NImagePosition(img, x, y,width, align)
+      }
+      println(s"Created positions for image ${i}")
+      positions
+    }
+  }
+
+  def createImageFile(canvas: BufferedImage, positions: Iterable[NImagePosition], index: Int, outDir: os.Path) = {
+      for pos <- positions do {
+        val imgWidth = canvas.getWidth() * pos.width
+        val scaled = scaleImage(pos.image, imgWidth)
+        drawImage(canvas, scaled, pos.x, pos.y, pos.align)
+      }
+      val fileName = f"a_${index}%05d.jpg"
+      val file = outDir / fileName
+      val writeResult = ImageIO.write(canvas, "jpg", file.toIO)
+      if !writeResult then throw IllegalStateException(s"Could not write image file ${file}")
+      println(s"wrote to ${file}")
   }
 
   def scaleImage(image: NImage, width: Double): BufferedImage = {
@@ -172,6 +278,4 @@ object Main {
     val bi = ImageIO.read(p.toIO)
     NImage(filename, bi)
   }
-
-
 }
