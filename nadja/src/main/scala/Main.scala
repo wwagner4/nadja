@@ -43,15 +43,19 @@ case class NImagePosition (
 object Main {
 
   @main def mainEntryPoint: Unit = {
+
+    //val baseDir = os.pwd / "src" / "test" / "resources"
+    val baseDir = os.home / "work" / "nadja" / "name_chars"
+
     val names1 = List(
-      //"coverall",
-      //"darlingkarte",
-      //"eisen",
-      //"farn",
-      //"gold",
-      //"lineal",
-      //"m",
-      //"mandel",
+      "coverall",
+      "darlingkarte",
+      "eisen",
+      "farn",
+      "gold",
+      "lineal",
+      "m",
+      "mandel",
       "lovetree",
       "mill",
       "monterey",
@@ -63,20 +67,66 @@ object Main {
       "yellow",
     )
     val names = List(
+      "pampelmuse",
       "lineal",
+      "coverall",
+      "mix1",
+      "mix2",
     )
 
     for name <- names do {
-      // mainPuls(name)
-      mainExplode(name)
-      // Magick.mainMontage(name)
-      // Magick.mainSwipe(name)
-      // Magick.mainPulse(name)
+      mainCreep(name, baseDir)
+      //mainPuls(name, baseDir)
+      //mainExplode(name, baseDir)
+      //Magick.mainMontage(name, baseDir)
+      //Magick.mainSwipe(name, baseDir)
+      //Magick.mainPulse(name, baseDir)
     }
 
   }
 
-  def mainPuls(name: String) = {
+  def mainCreep(name: String, baseDir: os.Path) = {
+
+    case class CreepConfig(
+      id: String,
+      width: Int,
+      height: Int,
+      frameCount: Int,
+      frameRate: Int
+    )
+
+    val config = CreepConfig(
+      id = "00",
+      width = 2000,
+      height = 1200,
+      frameCount = 300,
+      frameRate = 25,
+    )
+
+    println(s"creep ${name}")
+    val rootdir = baseDir / name
+    val outfile = os.home / "work" / "nadja" / "out" / s"creep-${name}-${config.id}.mp4"
+    val t1 = os.temp.dir()
+
+    val base = Util.createBase(rootdir)
+    val images = base.files
+      .filter(f => f.id != "CBL")
+      .map { fn => ImageIoUtil.createNImage(base, fn)}
+      .flatMap(i => List.fill(5)(i))
+
+    val shuffeled = Random.shuffle(images)
+
+    val positions = ImageIoUtil.creepPositions(shuffeled, config.frameCount, true).toList
+    for (ip, i) <- positions.zipWithIndex do {
+      val canvas = ImageIoUtil.createCanvas(config.width, config.height)
+      ImageIoUtil.createImageFile(canvas, ip, i, t1)
+    }
+    Util.video(t1, config.frameRate, config.width, config.height, outfile)
+    println(s"Wrote video to ${outfile}")
+    //Util.exe(List("mpv", s"${outfile}"))
+  }
+
+  def mainPuls(name: String, baseDir: os.Path) = {
 
     case class PulsConfig(
                            id: String,
@@ -85,21 +135,26 @@ object Main {
                            frameCount: Int,
                            frameRate: Int,
                            popFactor: Double,
+                           popFrameCount: Int,
                          )
 
-    val config = PulsConfig("01", 2000, 1500, 20, 10, 1.2)
+    val config = PulsConfig("01", 2000, 1500, 
+      frameCount=200, 
+      frameRate=20, 
+      popFactor=1.1, 
+      popFrameCount=10
+    )
 
     println(s"Creating pulse for ${name}")
 
-    val rootdir = os.pwd / "src" / "test" / "resources" / name
-    // val rootdir = os.home / "work" / "nadja" / "name_chars" / name
     val outfile = os.home / "work" / "nadja" / "out" / s"pulse-${name}-${config.id}.mp4"
     val t1 = os.temp.dir()
+    val rootDir = baseDir / name
 
-    println(s"rootdir : ${rootdir}")
+    println(s"rootdir : ${rootDir}")
     println(s"outfile : ${outfile}")
 
-    val base = Util.createBase(rootdir)
+    val base = Util.createBase(rootDir)
     val images = base.files.map { fn =>
       ImageIoUtil.createNImage(base, fn)
     }
@@ -108,7 +163,7 @@ object Main {
     val nCanvas = Util.patternToCanvas(pattern)
     val patternImages = nCanvas.ids.flatMap { id => images.filter(i => i.filename.id == id) }.toSeq
 
-    val positions: Iterable[Iterable[NImagePosition]] = ImageIoUtil.pulsePositions(patternImages, config.frameCount, config.popFactor)
+    val positions: Iterable[Iterable[NImagePosition]] = ImageIoUtil.pulsePositions(patternImages, config.frameCount, config.popFactor, config.popFrameCount)
     for (ip, i) <- positions.zipWithIndex do {
       val canvas = ImageIoUtil.createCanvas(config.width, config.height)
       ImageIoUtil.createImageFile(canvas, ip, i, t1)
@@ -120,7 +175,7 @@ object Main {
 
 }
 
-def mainExplode(name: String) = {
+def mainExplode(name: String, baseDir: os.Path) = {
 
   case class ExplodeConfig(
                           id: String,
@@ -131,12 +186,15 @@ def mainExplode(name: String) = {
                           frameRate: Int,
                         )
 
-  val config = ExplodeConfig("02", 2000, 1500, 200, 60, 40)
+  val config = ExplodeConfig("02", 2000, 1500, 
+    frameCount=200, 
+    framesToLeave=20, 
+    frameRate=15
+  )
 
   println(s"Creating explode for ${name}")
 
-  val rootdir = os.pwd / "src" / "test" / "resources" / name
-  // val rootdir = os.home / "work" / "nadja" / "name_chars" / name
+  val rootdir = baseDir / name
   val outfile = os.home / "work" / "nadja" / "out" / s"explode-${name}-${config.id}.mp4"
   val t1 = os.temp.dir()
 
@@ -152,9 +210,13 @@ def mainExplode(name: String) = {
   val nCanvas = Util.patternToCanvas(pattern)
   val patternImages = nCanvas.ids.flatMap { id => images.filter(i => i.filename.id == id) }.toSeq
 
-  val p1 = explodePositions(patternImages, (config.frameCount * 0.5).toInt, config.framesToLeave, false).toList.reverse
-  val p2 = explodePositions(patternImages, config.frameCount, config.framesToLeave, true).toList
-  val positions = p1 ++ p2
+  val f1 = (config.frameCount * 0.2).toInt
+  val f2 = (config.frameCount * 0.3).toInt
+  val f3 = (config.frameCount * 0.5).toInt
+  val p1 = ImageIoUtil.explodePositions(patternImages, f1, config.framesToLeave, false).toList.reverse
+  val p2 = ImageIoUtil.pulsePositions(patternImages, f2, 1.1, 10).toList
+  val p3 = ImageIoUtil.explodePositions(patternImages, f3, config.framesToLeave, true).toList
+  val positions = p1 ++ p2 ++ p3
   for (ip, i) <- positions.zipWithIndex do {
     val canvas = ImageIoUtil.createCanvas(config.width, config.height)
     ImageIoUtil.createImageFile(canvas, ip, i, t1)
@@ -162,19 +224,9 @@ def mainExplode(name: String) = {
 
   Util.video(t1, config.frameRate, config.width, config.height, outfile)
   println(s"Wrote video to ${outfile}")
-
 }
 
-def explodePositions(images: Iterable[NImage], frameCount: Int, framesToLeave: Double, endless: Boolean): Iterable[Iterable[NImagePosition]] = {
-
-  def fBase(a: Double, k: Double)(x: Double): Double = a + x * k
-
-  def randomK(): Double = {
-    val k1 = if Random.nextBoolean() 
-    then framesToLeave - Random.nextDouble() * framesToLeave * 0.5 
-    else Random.nextDouble() * framesToLeave * 0.5 - framesToLeave
-    1.0 / k1
-  }
+object ImageIoUtil {
 
   def thorus(x: Double): Double = {
     if x < -0.2 then thorus(x + 1.4)
@@ -182,27 +234,54 @@ def explodePositions(images: Iterable[NImage], frameCount: Int, framesToLeave: D
     else x
   }
 
-  //val x = j.toDouble / images.size
-  val fySeq: Seq[Double => Double] = (0 until images.size).map{i => fBase(0.5, randomK()) }
-  val fxSeq: Seq[Double => Double] = (0 until images.size).map{i => fBase(i.toDouble / images.size, randomK()) }
-  for i <- (0 to frameCount) yield {
-    val positions = for (img, j) <- images.zipWithIndex yield {
-      val width = 1.0 / images.size 
-      val x = if endless then thorus(fxSeq(j)(i)) else fxSeq(j)(i)
-      val y = if endless then thorus(fxSeq(j)(i)) else fySeq(j)(i)
-      val align = Alignment.START
-      println(s"Created image image ${j} y:${y}")
-      NImagePosition(img, x, y,width, align)
+  def creepPositions(images: Iterable[NImage], frameCount: Int, endless: Boolean): Iterable[Iterable[NImagePosition]] = {
+
+    def fBase(a: Double, k: Double)(x: Double): Double = a + x * k
+    def fSizeBase(p: Double)(x: Double): Double = {
+      val a = 0.08
+      a + 0.01 + a * math.sin((x * 0.1) + p)
     }
-    println(s"Created positions for image ${i}")
-    positions
-  }
-}
 
-object ImageIoUtil {
-
-  def pulsePositions(images: Iterable[NImage], frameCount: Int, popFactor: Double): Iterable[Iterable[NImagePosition]] = {
+    val fxSeq: Seq[Double => Double] = (0 until images.size).map{i => fBase(-0.2, 0.008 + Random.nextDouble * 0.003) }
+    val fySeq: Seq[Double => Double] = (0 until images.size).map{i => fBase(Random.nextDouble(), 0.0) }
+    val fSizeSeq: Seq[Double => Double] = (0 until images.size).map{i => fSizeBase(Random.nextDouble() * 3.14) }
     for i <- (0 to frameCount) yield {
+      for (img, j) <- images.zipWithIndex yield {
+        val width = fSizeSeq(j)(i)
+        val x = if endless then thorus(fxSeq(j)(i)) else fxSeq(j)(i)
+        val y = if endless then thorus(fySeq(j)(i)) else fySeq(j)(i)
+        val align = Alignment.START
+        NImagePosition(img, x, y,width, align)
+      }
+    }
+  }
+
+  def explodePositions(images: Iterable[NImage], frameCount: Int, framesToLeave: Double, endless: Boolean): Iterable[Iterable[NImagePosition]] = {
+
+    def fBase(a: Double, k: Double)(x: Double): Double = a + x * k
+
+    def randomK(): Double = {
+      val k1 = if Random.nextBoolean() 
+      then framesToLeave - Random.nextDouble() * framesToLeave * 0.5 
+      else Random.nextDouble() * framesToLeave * 0.5 - framesToLeave
+      1.0 / k1
+    }
+
+    val fySeq: Seq[Double => Double] = (0 until images.size).map{i => fBase(0.5, randomK()) }
+    val fxSeq: Seq[Double => Double] = (0 until images.size).map{i => fBase(i.toDouble / images.size, randomK()) }
+    for i <- (0 to frameCount) yield {
+      for (img, j) <- images.zipWithIndex yield {
+        val width = 1.0 / images.size 
+        val x = if endless then thorus(fxSeq(j)(i)) else fxSeq(j)(i)
+        val y = if endless then thorus(fySeq(j)(i)) else fySeq(j)(i)
+        val align = Alignment.START
+        NImagePosition(img, x, y,width, align)
+      }
+    }
+  }
+
+  def pulsePositions(images: Iterable[NImage], frameCount: Int, popFactor: Double, popFrameCount: Int): Iterable[Iterable[NImagePosition]] = {
+    for i <- (0 to frameCount / popFrameCount) yield {
       val positions = for (img, j) <- images.zipWithIndex yield {
         val width = (if Random.nextDouble() > 0.8 then popFactor else 1.0) / images.size 
         //val w0 = (if (i + j) % 10 == 0 then config.popFactor else 1.0) / patternImages.size 
@@ -211,9 +290,8 @@ object ImageIoUtil {
         val align = Alignment.START
         NImagePosition(img, x, y,width, align)
       }
-      println(s"Created positions for image ${i}")
-      positions
-    }
+      List.fill(popFrameCount)(positions)
+    }.flatten
   }
 
   def createImageFile(canvas: BufferedImage, positions: Iterable[NImagePosition], index: Int, outDir: os.Path) = {

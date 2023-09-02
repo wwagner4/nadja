@@ -5,17 +5,17 @@ import sys.process.Process
 object Magick {
 
 
-  def mainTryoutResize(name: String) = {
+  def mainTryoutResize(name: String, baseDir: os.Path) = {
     println(s"Creating pulse for ${name}")
 
-    // val rootdir = os.pwd / "src" / "test" / "resources" / name
-    val rootdir = os.home / "work" / "nadja" / "name_chars" / name
+    val rootDir = baseDir / name
+
     val outfile = os.home / "work" / "nadja" / "out" / s"pulse-${name}-00.mp4"
 
     val outdir = os.home / "work" / "nadja" / "tmp"
     os.makeDir.all(outdir)
 
-    os.list(rootdir).foreach(f => {
+    os.list(rootDir).foreach(f => {
       println(s"resize ${f}")
       val f1 = f.last
       val outfile = outdir / f1
@@ -26,7 +26,7 @@ object Magick {
     })
   }
 
-  def mainPulse(name: String) = {
+  def mainPulse(name: String, baseDir: os.Path) = {
 
     case class PulseConfig
     (
@@ -45,9 +45,8 @@ object Magick {
 
     println(s"Creating pulse for ${name}")
 
-    // val rootdir = os.pwd / "src" / "test" / "resources" / name
-    val rootdir = os.home / "work" / "nadja" / "name_chars" / name
-    val outfile = os.home / "work" / "nadja" / "out" / s"pulse-${name}-${config.id}.mp4"
+    val outfile = os.home / "work" / "nadja" / "out" / s"magick-pulse-${name}-${config.id}.mp4"
+    val rootDir = baseDir / name
 
     val pattern =
       """.......
@@ -62,7 +61,7 @@ object Magick {
         val resizedDir = os.temp.dir()
         val w = MagickUtil.roundToEven(config.width / canvas.cols)
         val h = MagickUtil.roundToEven(w / sf)
-        os.list(rootdir)
+        os.list(rootDir)
           .filter(f => os.isFile(f))
           .foreach(f => {
             val resizedFile = resizedDir / f.last
@@ -85,7 +84,7 @@ object Magick {
   }
 
 
-  def mainSwipe(name: String) = {
+  def mainSwipe(name: String, baseDir: os.Path) = {
 
     def slowFactorsIncreas(): Iterable[Int] = {
       def f(i: Int): Int = {
@@ -180,19 +179,18 @@ object Magick {
       fSlow = slowFactorsIncreas,
     )
 
-    // val rootdir = os.pwd / "src" / "test" / "resources" / name
-    val rootdir = os.home / "work" / "nadja" / "name_chars" / name
     val outfile = os.home / "work" / "nadja" / "out" / s"swipe-${name}-${config.id}.mp4"
+    val rootDir = baseDir / name
 
     val resizedDir = os.temp.dir()
-    resizeAll(rootdir, config.width, resizedDir)
+    resizeAll(rootDir, config.width, resizedDir)
     val base = Util.createBase(resizedDir)
     println(s"base: ${base}")
     doSwipe(base, config, outfile)
   }
 
 
-  def mainMontage(name: String) = {
+  def mainMontage(name: String, baseDir: os.Path) = {
 
     case class MontageConfig(
                               id: String,
@@ -218,9 +216,7 @@ object Magick {
     )
 
 
-    // val rootdir = os.home / "work" / "nadja" / name
-    val rootdir = os.home / "work" / "nadja" / "name_chars" / name
-    // val rootdir = os.pwd / "src" / "test" / "resources" / name
+    val rootdir = baseDir / name
     val videofile = os.home / "work" / "nadja" / "out" / s"montage-${name}-${config.id}.mp4"
 
     def idxStr(i: Int): String = "%06d".format(i)
