@@ -8,5 +8,12 @@ lazy val root = project
 
     scalaVersion := scala3Version,
 
-    libraryDependencies += "org.scalameta" %% "munit" % "0.7.29" % Test
+    libraryDependencies ++= Seq(
+      "com.lihaoyi" %% "os-lib" % "0.9.1",
+      "org.scalameta" %% "munit" % "0.7.29" % Test,
+    ),
+    scalacOptions ++= Seq(
+      // "-deprecation"
+    ),
   )
+
