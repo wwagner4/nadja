@@ -1,14 +1,16 @@
 
+import Vec._
+
 class MySuite extends munit.FunSuite {
 
   List(
-    ("coverall_D.jpg", Some(NFilename("coverall", "D", "jpg"))),
-    ("coverall_N.jpg", Some(NFilename("coverall", "N", "jpg"))),
-    ("coverall_J.jpg", Some(NFilename("coverall", "J", "jpg"))),
-    ("coverall_A.jpg", Some(NFilename("coverall", "A", "jpg"))),
-    ("x_A.JPG", Some(NFilename("x", "A", "JPG"))),
-    ("xA.JPG", None),
-    ("x_X.JPG", Some(NFilename("x", "X", "JPG"))),
+    ("coverall_D.jpg", Some(NFilename("coverall", Some("D"), "jpg"))),
+    ("coverall_N.jpg", Some(NFilename("coverall", Some("N"), "jpg"))),
+    ("coverall_J.jpg", Some(NFilename("coverall", Some("J"), "jpg"))),
+    ("coverall_A.jpg", Some(NFilename("coverall", Some("A"), "jpg"))),
+    ("x_A.JPG", Some(NFilename("x", Some("A"), "JPG"))),
+    ("xA.JPG", Some(NFilename("xA", None, "JPG"))),
+    ("x_X.JPG", Some(NFilename("x", Some("X"), "JPG"))),
     ("x_NJPG", None),
     ("", None),
   ).foreach { (fn, nfn) =>
@@ -83,10 +85,15 @@ class MySuite extends munit.FunSuite {
     (2056.49, 2056),
   ).foreach { (in, expected) => {
     test(s"round to even ${in}") {
-      assertEquals(MagickUtil.roundToEven(in), expected)
+        assertEquals(MagickUtil.roundToEven(in), expected)
+      }
     }
-
   }
+
+  test("vectors vec to pol") {
+    val v = Vec(1, 0)
+    val pol = vecToPol(v)
+    assertEquals(Pol(1, 0.0), pol)
   }
 
 

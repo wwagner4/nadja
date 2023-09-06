@@ -51,8 +51,12 @@ object Util {
     try
       val a = filename.split("\\.")
       val b = a(0).split("_")
-      val c = b(1)
-      Some(NFilename(b(0), c, a(1)))
+      if b.size == 2 then {
+        val c = b(1)
+        Some(NFilename(b(0), Some(c), a(1)))
+      } else {
+        Some(NFilename(a(0), None, a(1)))
+      }
     catch
       case _: Exception => {
         println(s"No image file ${filename}")
@@ -61,7 +65,10 @@ object Util {
   }
 
   def path(nfn: NFilename, root: os.Path): os.Path = {
-    val x = s"${nfn.name}_${nfn.id}.${nfn.ext}"
+    val x = nfn.id match {
+      case Some(id) => s"${nfn.name}_${id}.${nfn.ext}"
+      case None => s"${nfn.name}.${nfn.ext}"
+    }
     root / x
   }
 

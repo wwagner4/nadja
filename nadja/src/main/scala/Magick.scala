@@ -15,6 +15,9 @@ object Magick {
     val outdir = os.home / "work" / "nadja" / "tmp"
     os.makeDir.all(outdir)
 
+    println("----- tryout resize -------")
+
+
     os.list(rootDir).foreach(f => {
       println(s"resize ${f}")
       val f1 = f.last
@@ -26,7 +29,7 @@ object Magick {
     })
   }
 
-  def mainPulse(name: String, baseDir: os.Path) = {
+  def mainPulse(name: String, baseDir: os.Path, playVideo: Boolean = false) = {
 
     case class PulseConfig
     (
@@ -37,29 +40,26 @@ object Magick {
     )
 
     val config = PulseConfig(
-      id = "00",
+      id = "10",
       width = 1200,
       height = 900,
       frameCount = 100
     )
 
-    println(s"Creating pulse for ${name}")
+    println(s"---- Creating pulse for ${name} -----")
 
     val outfile = os.home / "work" / "nadja" / "out" / s"magick-pulse-${name}-${config.id}.mp4"
     val rootDir = baseDir / name
 
     val pattern =
-      """.......
-        |.NADJA.
-        |.......
-        |""".stripMargin
+      """NADJA""".stripMargin
 
     val canvas = Util.patternToCanvas(pattern)
 
-    val bases = List(1.0, 0.7, 0.5, 0.3)
+    val bases = List(1.0, 0.7, 0.5, 0.4)
       .map { sf =>
         val resizedDir = os.temp.dir()
-        val w = MagickUtil.roundToEven(config.width / canvas.cols)
+        val w = MagickUtil.roundToEven(2 * config.width / canvas.cols)
         val h = MagickUtil.roundToEven(w / sf)
         os.list(rootDir)
           .filter(f => os.isFile(f))
@@ -81,10 +81,11 @@ object Magick {
       montage(filenames, canvas.rows, canvas.cols, outfile)
     }
     Util.video(frameImagesDir, 10, config.width, config.height, outfile, ext = "jpg")
+    if playVideo then Util.exe(List("mpv", s"${outfile}"))
   }
 
 
-  def mainSwipe(name: String, baseDir: os.Path) = {
+  def mainSwipe(name: String, baseDir: os.Path, playVideo: Boolean = false) = {
 
     def slowFactorsIncreas(): Iterable[Int] = {
       def f(i: Int): Int = {
@@ -123,7 +124,7 @@ object Magick {
       Util.video(t1, config.videoFramerate, config.width, config.height, outfile)
       println("------------------------------------------------------------------")
       println(s"Created video: ${outfile}")
-
+      if playVideo then Util.exe(List("mpv", s"${outfile}"))
     }
 
     def createImage(base: NBase, descr: List[String], index: Int, viewcols: Int, width: Int, height: Int, outdir: os.Path) = {
@@ -181,6 +182,7 @@ object Magick {
 
     val outfile = os.home / "work" / "nadja" / "out" / s"swipe-${name}-${config.id}.mp4"
     val rootDir = baseDir / name
+    println("----- swipe -------")
 
     val resizedDir = os.temp.dir()
     resizeAll(rootDir, config.width, resizedDir)
@@ -190,7 +192,7 @@ object Magick {
   }
 
 
-  def mainMontage(name: String, baseDir: os.Path) = {
+  def mainMontage(name: String, baseDir: os.Path, playVideo: Boolean = false) = {
 
     case class MontageConfig(
                               id: String,
@@ -219,6 +221,7 @@ object Magick {
     val rootdir = baseDir / name
     val videofile = os.home / "work" / "nadja" / "out" / s"montage-${name}-${config.id}.mp4"
 
+    println("----- montage -------")
     def idxStr(i: Int): String = "%06d".format(i)
 
     val filenameIds = config.pattern.map(c => s"${c}").map(Util.patternToFilenameId)
@@ -256,6 +259,7 @@ object Magick {
         resize(t1, config.width, config.height, outfile)
       }
     }
+
     (1 to config.lastImageCount).foreach { i =>
       val outfile = framesdir / s"nadja_${idxStr(lastIndex + i)}.jpg"
 
@@ -271,9 +275,10 @@ object Magick {
     Util.video(framesdir, config.framerate, config.width, config.height, videofile)
     println("------------------------------------------------------------------")
     println(s"Created video: ${videofile}")
+    if playVideo then Util.exe(List("mpv", s"${videofile}"))
   }
 
-  def resize(infile: os.Path, width: Int, height: Int, outfile: os.Path) = {
+  private def resize(infile: os.Path, width: Int, height: Int, outfile: os.Path) = {
     val geo1 = s"${width}x${height}"
 
     val cmd1 = List(
@@ -295,10 +300,10 @@ object Magick {
     Util.exe(cmd1)
   }
 
-  val imageExts = Seq("jpg", "jpeg", "png")
+  private val imageExts = Seq("jpg", "jpeg", "png")
 
 
-  def resizeAll(indir: os.Path, size: Int, outdir: os.Path) = {
+  private def resizeAll(indir: os.Path, size: Int, outdir: os.Path) = {
 
     val s = MagickUtil.roundToEven(size)
     val geo = s"${s}x${s}"
@@ -321,7 +326,7 @@ object Magick {
     files.foreach(rs(_))
   }
 
-  def montage(infiles: Iterable[os.Path], rows: Int, cols: Int, outfile: os.Path) = {
+  private def montage(infiles: Iterable[os.Path], rows: Int, cols: Int, outfile: os.Path) = {
     val size = MagickUtil.sizeFromRows(rows)
     val tilesgeo = s"${cols}x${rows}"
     val fnams = infiles
@@ -387,14 +392,14 @@ object MagickUtil {
 
   def fienamesContinually(base: NBase, ids: Seq[String]): LazyList[os.Path] = {
     val cs = ids
-      .flatMap { c => base.files.filter { f => f.id == c } }
+      .flatMap { c => base.files.filter { f => f.id.map(_ == c).getOrElse(false) } }
       .map(f => Util.path(f, base.path))
     if cs.isEmpty then throw IllegalArgumentException(s"found no files in ${base.path}")
     LazyList.continually(cs).flatten
   }
 
   def filenameFromBase(base: NBase, id: String): os.Path = {
-    val fn = base.files.filter { f => f.id == id }.head
+    val fn = base.files.filter { f => f.id.map(_ == id).getOrElse(false) }.head
     Util.path(fn, base.path)
   }
 }
